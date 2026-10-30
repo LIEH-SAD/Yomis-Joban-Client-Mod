@@ -1,0 +1,22 @@
+# Gradle / Loom
+.gradle/
+build/
+*/build/
+!gradle/wrapper/gradle-wrapper.jar
+checkouts/
+remappedSrc/
+run/
+*/run/
+
+# Local dependencies (MTR jars are provided separately)
+libs/
+
+# Logs and diagnostics
+*.log
+!LICENSE*
+*.log.*
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.idea/

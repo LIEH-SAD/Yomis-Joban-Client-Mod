@@ -1,6 +1,7 @@
 package com.jsblock.render;
 
 import com.jsblock.data.PIDSPreset;
+import com.jsblock.scripting.pids.PIDSScriptRenderer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -89,6 +90,11 @@ public class RenderLCDPIDS<T extends BlockEntityMapper> extends RenderPIDSBase<T
         final BlockPos pos = entity.getBlockPos();
         final Direction facing = IBlock.getStatePropertySafe(world, pos, HorizontalDirectionalBlock.FACING);
 
+        /* If the player is too far away from the PIDS that not even the train renders */
+        if (RenderTrains.shouldNotRender(pos, Math.min(MAX_VIEW_DISTANCE, RenderTrains.maxTrainRenderDistance), rotate90 ? null : facing)) {
+            return;
+        }
+
         try {
             final PIDSPreset pidsPreset = preset == null ? DEFAULT_PRESET : preset;
             final Font textRenderer = Minecraft.getInstance().font;
@@ -116,9 +122,14 @@ public class RenderLCDPIDS<T extends BlockEntityMapper> extends RenderPIDSBase<T
 
             matrices.popPose();
 
-            /* If the player is too far away from the PIDS that not even the train renders */
-            if (RenderTrains.shouldNotRender(pos, Math.min(MAX_VIEW_DISTANCE, RenderTrains.maxTrainRenderDistance), rotate90 ? null : facing)) {
-                return;
+            /* Script-drawn content, in the preset background's texel space */
+            if (pidsPreset.script != null && !pidsPreset.script.isEmpty()) {
+                matrices.pushPose();
+                matrices.translate(startX - 21F / 2, -1.5F - 1F, 0.02);
+                PIDSScriptRenderer.render(matrices, vertexConsumers, immediate, textRenderer, facing, light, entity, pidsPreset, customMessages, hideArrivals, filteredPlatformIds,
+                        pidsPreset.scriptWidth == null ? BACKGROUND_WIDTH : pidsPreset.scriptWidth,
+                        pidsPreset.scriptHeight == null ? BACKGROUND_HEIGHT : pidsPreset.scriptHeight);
+                matrices.popPose();
             }
 
             if (!filteredPlatformIds.isEmpty()) {

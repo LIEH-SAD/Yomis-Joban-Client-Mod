@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.jsblock.Joban;
 import com.jsblock.data.PIDSPreset;
+import com.jsblock.scripting.Scripting;
 import mtr.mappings.Utilities;
 import mtr.mappings.UtilitiesClient;
 import net.minecraft.resources.ResourceLocation;
@@ -34,7 +35,6 @@ public class JobanCustomResources {
      */
     public static void reload(ResourceManager manager) {
         PIDSPresets.clear();
-
         /* Add default preset */
         PIDSPresets.put("door_cls_apg", defaultPreset1);
         PIDSPresets.put("door_cls_psd", defaultPreset2);
@@ -66,6 +66,9 @@ public class JobanCustomResources {
         });
 
         Joban.LOGGER.info("[Joban Client] Loaded PIDS Preset: " + String.join(", ", PIDSPresets.keySet()));
+
+        /* Re-parse scripts once the resource packs (and therefore the custom presets) are available */
+        Scripting.reload();
     }
 
     private static void readResource(ResourceManager manager, String path, Consumer<JsonObject> callback) {

@@ -14,6 +14,12 @@ public class PIDSPreset {
     public boolean customTextPushArrival;
     public boolean showWeather;
     public boolean showClock;
+    /** Script attached to this preset: either a resource location ({@code namespace:scripts/foo.js}) or inline JS source. */
+    public String script = null;
+    /** Canvas width in script units, defaults to the background texture width. */
+    public Integer scriptWidth = null;
+    /** Canvas height in script units, defaults to the background texture height. */
+    public Integer scriptHeight = null;
 
     public PIDSPreset(ResourceLocation image, boolean showWeather, boolean showClock, boolean customTextPushArrival, boolean[] visibility, Integer color, String font, Int2IntArrayMap carLengthColorMap) {
         this.image = image;
@@ -61,7 +67,28 @@ public class PIDSPreset {
                 }
             }
         }
-        return new PIDSPreset(background, showWeather, showClock, customTextPushArrival, hideRowArray, color, fonts, carLengthColorMap);
+        final PIDSPreset preset = new PIDSPreset(background, showWeather, showClock, customTextPushArrival, hideRowArray, color, fonts, carLengthColorMap);
+        if (element.getAsJsonObject().has("script") && !element.getAsJsonObject().get("script").isJsonNull()) {
+            preset.script = element.getAsJsonObject().get("script").getAsString();
+        }
+        if (element.getAsJsonObject().has("scriptWidth") && !element.getAsJsonObject().get("scriptWidth").isJsonNull()) {
+            preset.scriptWidth = element.getAsJsonObject().get("scriptWidth").getAsInt();
+        }
+        if (element.getAsJsonObject().has("scriptHeight") && !element.getAsJsonObject().get("scriptHeight").isJsonNull()) {
+            preset.scriptHeight = element.getAsJsonObject().get("scriptHeight").getAsInt();
+        }
+        return preset;
+    }
+
+    public PIDSPreset withScript(String script) {
+        this.script = script;
+        return this;
+    }
+
+    public PIDSPreset withScriptSize(Integer width, Integer height) {
+        this.scriptWidth = width;
+        this.scriptHeight = height;
+        return this;
     }
 
     public Integer getCarColor(int car) {

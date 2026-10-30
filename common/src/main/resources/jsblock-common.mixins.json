@@ -4,9 +4,12 @@
   "compatibilityLevel": "JAVA_8",
   "minVersion": "0.8",
   "client": [
+    "MixinJonModelTrainRenderer",
+    "MixinRenderTrains"
   ],
   "mixins": [
-    "MixinTicketBarrier"
+    "MixinTicketBarrier",
+    "MixinTrainAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

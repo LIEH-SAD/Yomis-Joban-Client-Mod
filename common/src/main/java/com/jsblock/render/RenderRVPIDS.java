@@ -2,6 +2,7 @@ package com.jsblock.render;
 
 import com.jsblock.Joban;
 import com.jsblock.data.PIDSPreset;
+import com.jsblock.scripting.pids.PIDSScriptRenderer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -160,6 +161,16 @@ public class RenderRVPIDS<T extends BlockEntityMapper> extends RenderPIDSBase<T>
             /* Render Weather icon */
             if(pidsPreset.showWeather) {
                 renderWeather(matrices, vertexConsumers, world, facing);
+            }
+
+            /* Script-drawn content, in the preset background's texel space */
+            if (pidsPreset.script != null && !pidsPreset.script.isEmpty()) {
+                matrices.pushPose();
+                matrices.translate(startX - 26F / 2, -1.5F, 0.01);
+                PIDSScriptRenderer.render(matrices, vertexConsumers, immediate, textRenderer, facing, light, entity, pidsPreset, customMessages, hideArrivals, filteredPlatformIds,
+                        pidsPreset.scriptWidth == null ? BACKGROUND_WIDTH : pidsPreset.scriptWidth,
+                        pidsPreset.scriptHeight == null ? BACKGROUND_HEIGHT : pidsPreset.scriptHeight);
+                matrices.popPose();
             }
 
             matrices.popPose();

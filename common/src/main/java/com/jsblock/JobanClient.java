@@ -18,6 +18,8 @@ import com.jsblock.render.RenderLCDPIDS;
 import com.jsblock.render.RenderRVPIDS;
 import com.jsblock.render.RenderSignalLight;
 import com.jsblock.render.RenderStationNameTall;
+import com.jsblock.scripting.Scripting;
+import dev.architectury.event.events.client.ClientTickEvent;
 import dev.architectury.injectables.annotations.ExpectPlatform;
 import mtr.RegistryClient;
 import mtr.data.PIDSType;
@@ -113,6 +115,10 @@ public class JobanClient {
         RegistryClient.registerNetworkReceiver(IPacketJoban.PACKET_PLAY_NETWORK_SOUND, PacketClient::playNetworkSoundS2C);
         RegistryClient.registerNetworkReceiver(IPacketJoban.PACKET_OPEN_SOUND_LOOPER_SCREEN, PacketClient::openSoundLooperScreenS2C);
         RegistryClient.registerNetworkReceiver(IPacketJoban.PACKET_VERSION_CHECK, PacketClient::versionCheckS2C);
+
+        /* Scripting engine: parsed lazily on the next resource reload */
+        Scripting.init();
+        ClientTickEvent.CLIENT_POST.register(client -> Scripting.tick());
     }
 
     @ExpectPlatform
