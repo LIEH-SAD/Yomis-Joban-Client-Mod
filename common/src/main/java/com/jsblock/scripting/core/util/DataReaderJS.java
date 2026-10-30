@@ -1,7 +1,7 @@
 package com.jsblock.scripting.core.util;
 
 import javax.imageio.ImageIO;
-import java.awt.Font;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;

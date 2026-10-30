@@ -89,8 +89,12 @@ public class ContentItem extends AbstractListItem {
 		}
 
 		if(widget != null) {
-			// The widget is rendered by the screen itself, we only sync its visibility
 			widget.setVisible(widgetVisible);
+
+			if(rowInSight) {
+				// We have to draw our widget (Right side) again after rendering the highlight so it doesn't get covered.
+				widget.render(guiGraphics, mouseX, mouseY, tickDelta);
+			}
 		}
 	}
 

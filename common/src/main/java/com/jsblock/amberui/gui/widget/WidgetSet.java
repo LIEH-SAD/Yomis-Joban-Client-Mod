@@ -35,10 +35,12 @@ public class WidgetSet extends AbstractWidget implements WidgetHost {
 	 * Make sure to call this after all widget has been added.
 	 */
 	public void setXYSize(int x, int y, int width, int height) {
-		setX(x);
-		setY(y);
-		setWidth(width);
-		setHeight(height);
+		// Assign the fields directly: the overridden setX()/setY() re-layout the children, which
+		// would clamp their width against the not-yet-updated width of the set.
+		super.setX(x);
+		super.setY(y);
+		super.setWidth(width);
+		this.height = height;
 		positionWidgets();
 	}
 
@@ -99,7 +101,15 @@ public class WidgetSet extends AbstractWidget implements WidgetHost {
 
 	@Override
 	public void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-		// The widgets are rendered by the screen itself
+		for(MappedWidget widget : getAllWidgets()) {
+			widget.render(guiGraphics, mouseX, mouseY, partialTick);
+		}
+	}
+
+	@Override
+	public boolean mouseClicked(double mouseX, double mouseY, int button) {
+		// The widgets inside the set are registered with the screen themselves
+		return false;
 	}
 
 	@Override
@@ -107,7 +117,7 @@ public class WidgetSet extends AbstractWidget implements WidgetHost {
 		for(MappedWidget widget : getAllWidgets()) {
 			widget.setVisible(visible);
 		}
-		super.setVisible(visible);
+		this.visible = visible;
 	}
 
 	@Override

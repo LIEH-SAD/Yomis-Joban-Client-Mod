@@ -36,10 +36,9 @@ public class ScreenBase extends ScreenMapper {
 	/**
 	 * Called when the screen is "closed", i.e. the escape key is pressed or the screen is replaced.
 	 */
-	protected void onClose2() {
+	public void onClose2() {
 		Minecraft.getInstance().setScreen(previousScreen);
 	}
-
 	@Override
 	public void onClose() {
 		onClose2();

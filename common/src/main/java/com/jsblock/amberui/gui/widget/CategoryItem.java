@@ -27,7 +27,7 @@ public class CategoryItem extends AbstractListItem {
 	public void draw(GuiGraphics guiGraphics, int entryX, int entryY, int width, int height, int mouseX, int mouseY, boolean widgetVisible, boolean rowInSight, double elapsed, float tickDelta) {
 		if(rowInSight) {
 			GuiHelper.drawRectangle(guiGraphics, entryX, entryY, width, this.height, 0x99999999);
-			guiGraphics.drawCenteredString(getFont(), title, (entryX + width / 2), entryY - (8 / 2) + (this.height / 2), ARGB_WHITE);
+			guiGraphics.drawCenteredString(GuiHelper.getFont(), title, (entryX + width / 2), entryY - (8 / 2) + (this.height / 2), ARGB_WHITE);
 		}
 	}
 
@@ -50,6 +50,6 @@ public class CategoryItem extends AbstractListItem {
 
 	@Override
 	public int getHeight() {
-		return 22;
+		return this.height;
 	}
 }

@@ -27,7 +27,7 @@ public abstract class TitledScreen extends AnimatedScreen implements GuiHelper {
 	}
 
 	public void drawBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float tickDelta) {
-		super.renderBackground(guiGraphics, mouseX, mouseY, tickDelta);
+		super.renderBackground(guiGraphics);
 	}
 
 	private void drawTitle(GuiGraphics guiGraphics) {
@@ -38,8 +38,8 @@ public abstract class TitledScreen extends AnimatedScreen implements GuiHelper {
 		guiGraphics.pose().translate(width / 2.0, TEXT_PADDING, 0);
 		guiGraphics.pose().translate(0, -((titleHeight + TEXT_PADDING) * (1 - animationProgress)), 0);
 		guiGraphics.pose().scale(TITLE_SCALE, TITLE_SCALE, TITLE_SCALE);
-		GuiHelper.scaleToFit(guiGraphics, getFont().width(titleText), width / (float) TITLE_SCALE, true);
-		guiGraphics.drawCenteredString(getFont(), titleText, 0, 0, 0xFFFFFFFF);
+		GuiHelper.scaleToFit(guiGraphics, GuiHelper.getFont().width(titleText), width / (float) TITLE_SCALE, true);
+		guiGraphics.drawCenteredString(GuiHelper.getFont(), titleText, 0, 0, 0xFFFFFFFF);
 		guiGraphics.pose().popPose();
 	}
 
@@ -50,8 +50,8 @@ public abstract class TitledScreen extends AnimatedScreen implements GuiHelper {
 		guiGraphics.pose().pushPose();
 		guiGraphics.pose().translate(width / 2.0, titleHeight * animationProgress, 0);
 		guiGraphics.pose().translate(0, TEXT_PADDING * 1.5, 0);
-		GuiHelper.scaleToFit(guiGraphics, getFont().width(subtitleText), width, true);
-		guiGraphics.drawCenteredString(getFont(), subtitleText, 0, 0, 0xFFFFFFFF);
+		GuiHelper.scaleToFit(guiGraphics, GuiHelper.getFont().width(subtitleText), width, true);
+		guiGraphics.drawCenteredString(GuiHelper.getFont(), subtitleText, 0, 0, 0xFFFFFFFF);
 		guiGraphics.pose().popPose();
 	}
 

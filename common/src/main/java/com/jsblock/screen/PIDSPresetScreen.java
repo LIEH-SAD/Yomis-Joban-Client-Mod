@@ -1,0 +1,159 @@
+package com.jsblock.screen;
+
+import com.jsblock.amberui.gui.GuiHelper;
+import com.jsblock.amberui.gui.screen.TitledScreen;
+import com.jsblock.amberui.gui.widget.*;
+import com.jsblock.block.JobanPIDSBase;
+import com.jsblock.block.PIDSRVBase;
+import com.jsblock.client.JobanCustomResources;
+import com.jsblock.data.PIDSPresetEntry;
+import mtr.mappings.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.block.entity.BlockEntity;
+
+import java.util.function.Consumer;
+
+/**
+ * The PIDS preset picker.<br>
+ * Ported from JCM 2.3's {@code com.lx862.jcm.mod.gui.screen.PIDSPresetScreen}.
+ */
+public class PIDSPresetScreen extends TitledScreen implements GuiHelper {
+	private static final ResourceLocation PIDS_PREVIEW_BASE = new ResourceLocation("jsblock:textures/gui/pids_preview.png");
+	private final Consumer<String> callback;
+	private final String selectedPreset;
+	private final String pidsType;
+
+	public PIDSPresetScreen(BlockPos pos, String selectedPreset, Consumer<String> callback) {
+		super(Component.empty(), false);
+		this.selectedPreset = selectedPreset;
+		this.callback = callback;
+		this.pidsType = getPIDSType(pos);
+	}
+
+	private static String getPIDSType(BlockPos pos) {
+		if (Minecraft.getInstance().level == null) return "";
+
+		final BlockEntity blockEntity = Minecraft.getInstance().level.getBlockEntity(pos);
+
+		if (blockEntity instanceof PIDSRVBase.TileEntityBlockRVPIDS) {
+			return "rv_pids";
+		} else if (blockEntity instanceof JobanPIDSBase.TileEntityBlockJobanPIDS) {
+			return "pids";
+		}
+
+		return "";
+	}
+
+	@Override
+	protected void init2() {
+		super.init2();
+		final int contentWidth = (int) Math.min((width * 0.75), MAX_CONTENT_WIDTH);
+		final int listViewHeight = (int) ((height - 60) * 0.76);
+		final int startX = (width - contentWidth) / 2;
+		final int searchStartY = TEXT_PADDING * 5;
+		final int startY = searchStartY + (TEXT_PADDING * 3);
+
+		final ListViewWidget listViewWidget = new ListViewWidget();
+		addConfigEntries(listViewWidget);
+
+		final AlwaysRenderedTextField searchBox = new AlwaysRenderedTextField(startX, searchStartY, contentWidth, 22, 60, Text.translatable("gui.jsblock.widget.search").getString());
+		searchBox.setResponder(listViewWidget::setSearchTerm);
+		searchBox.setValue(searchBox.getValue());
+
+		listViewWidget.setXYSize(startX, startY, contentWidth, listViewHeight);
+		addRenderableWidget(listViewWidget);
+		addRenderableWidget(searchBox);
+	}
+
+	@Override
+	public Component getScreenTitle() {
+		return Text.translatable("gui.jsblock.pids_preset.title");
+	}
+
+	@Override
+	public Component getScreenSubtitle() {
+		return Text.translatable("gui.jsblock.pids_preset.subtitle", selectedPreset);
+	}
+
+	private void addConfigEntries(ListViewWidget listViewWidget) {
+		listViewWidget.addCategory(Text.translatable("gui.jsblock.pids_preset.listview.category.builtin"));
+
+		for (PIDSPresetEntry preset : JobanCustomResources.getBuiltInPresets()) {
+			addPreset(listViewWidget, preset);
+		}
+
+		final java.util.List<PIDSPresetEntry> customPresets = JobanCustomResources.getCustomPresets();
+
+		if (!customPresets.isEmpty()) {
+			listViewWidget.addCategory(Text.translatable("gui.jsblock.pids_preset.listview.category.custom"));
+
+			for (PIDSPresetEntry preset : customPresets) {
+				addPreset(listViewWidget, preset);
+			}
+		}
+	}
+
+	private void addPreset(ListViewWidget listViewWidget, PIDSPresetEntry preset) {
+		if (!preset.typeAllowed(pidsType)) return;
+
+		final Button selectBtn = Button.builder(Text.translatable("gui.jsblock.pids_preset.listview.widget.choose"), btn -> choose(preset.getId()))
+				.bounds(0, 0, 60, 20)
+				.build();
+
+		if (preset.getId().equals(selectedPreset)) {
+			selectBtn.setMessage(Text.translatable("gui.jsblock.pids_preset.listview.widget.selected"));
+			selectBtn.active = false;
+		}
+
+		final HorizontalWidgetSet widgetSet = new HorizontalWidgetSet();
+		widgetSet.addWidget(new MappedWidget(selectBtn));
+		widgetSet.setXYSize(0, 0, 100, 20);
+
+		addWidget(selectBtn);
+
+		final ContentItem contentItem = new ContentItem(Text.literal(preset.getName()), new MappedWidget(widgetSet), 26);
+		contentItem.setIconCallback((guiGraphics, startX, startY, width, height) -> drawPIDSPreview(preset, guiGraphics, startX, startY, width, height, false));
+		listViewWidget.add(contentItem);
+	}
+
+	public static void drawPIDSPreview(PIDSPresetEntry preset, GuiGraphics guiGraphics, int startX, int startY, int width, int height, boolean backgroundOnly) {
+		final int offset = 6;
+
+		// Background
+		GuiHelper.drawTexture(guiGraphics, PIDS_PREVIEW_BASE, startX, startY, width, height);
+		if (preset == null) return;
+
+		if (preset.hasThumbnail()) {
+			GuiHelper.drawTexture(guiGraphics, preset.getThumbnail(), startX + 0.5, startY + offset + 0.5, width - 1, height - offset - 4);
+		}
+
+		if (!backgroundOnly) {
+			final double perRow = height / 8.5;
+			final double rowHeight = Math.max(0.5, height / 24.0);
+
+			for (int i = 0; i < 4; i++) {
+				if (preset.isRowHidden(i)) continue;
+
+				final double curY = startY + offset + ((i + 1) * perRow);
+				GuiHelper.drawRectangle(guiGraphics, startX + 1.5, curY, width * 0.55, rowHeight, preset.getTextColor());
+				GuiHelper.drawRectangle(guiGraphics, startX + (width * 0.65), curY, rowHeight, rowHeight, preset.getTextColor());
+				GuiHelper.drawRectangle(guiGraphics, startX + (width * 0.75), curY, (width * 0.2) - 0.5, rowHeight, preset.getTextColor());
+			}
+		}
+	}
+
+	private void choose(String id) {
+		callback.accept(id);
+		onClose2();
+	}
+
+	@Override
+	public boolean isPauseScreen() {
+		return false;
+	}
+}

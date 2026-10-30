@@ -1,5 +1,6 @@
 package com.jsblock.amberui.gui.widget;
 
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 
 /**
@@ -60,7 +61,12 @@ public class MappedWidget implements WidgetHost {
 
 	@Override
 	public void setVisible(boolean visible) {
-		widget.visible = visible;
+		// WidgetSet overrides setVisible to propagate the state to its children, vanilla widgets have no such override
+		if(widget instanceof WidgetSet) {
+			((WidgetSet) widget).setVisible(visible);
+		} else {
+			widget.visible = visible;
+		}
 	}
 
 	@Override
@@ -71,5 +77,13 @@ public class MappedWidget implements WidgetHost {
 	@Override
 	public void setAllY(int newY) {
 		widget.setY(newY);
+	}
+
+	/**
+	 * Draw the wrapped widget. The wrapped widget is not part of the screen's render list,
+	 * it is drawn by the list entry that owns it (as in JCM 2.3).
+	 */
+	public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float tickDelta) {
+		widget.render(guiGraphics, mouseX, mouseY, tickDelta);
 	}
 }

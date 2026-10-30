@@ -7,15 +7,7 @@ import com.jsblock.scripting.primitive.ParsedScript;
 import com.jsblock.scripting.primitive.ScriptContent;
 import com.jsblock.scripting.primitive.ScriptInstance;
 import net.minecraft.resources.ResourceLocation;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.Function;
-import org.mozilla.javascript.ImporterTopLevel;
-import org.mozilla.javascript.NativeJavaClass;
-import org.mozilla.javascript.NativeJavaMethod;
-import org.mozilla.javascript.NativeJavaObject;
-import org.mozilla.javascript.RhinoException;
-import org.mozilla.javascript.Script;
-import org.mozilla.javascript.Scriptable;
+import org.mozilla.javascript.*;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;

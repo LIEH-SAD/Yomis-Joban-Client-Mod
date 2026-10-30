@@ -1,25 +1,6 @@
 package com.jsblock;
 
-import com.jsblock.block.APGDoorDRL;
-import com.jsblock.block.ButterflyLight;
-import com.jsblock.block.DepartureTimer;
-import com.jsblock.block.FareSaver1;
-import com.jsblock.block.KCRNameSign;
-import com.jsblock.block.KCRNameSignStationColored;
-import com.jsblock.block.PIDS1A;
-import com.jsblock.block.PIDSLCD;
-import com.jsblock.block.PIDSRV;
-import com.jsblock.block.PIDSRVSIL1;
-import com.jsblock.block.PIDSRVSIL2;
-import com.jsblock.block.SignalLightBlue;
-import com.jsblock.block.SignalLightGreen;
-import com.jsblock.block.SignalLightInverted1;
-import com.jsblock.block.SignalLightInverted2;
-import com.jsblock.block.SignalLightRed1;
-import com.jsblock.block.SignalLightRed2;
-import com.jsblock.block.SoundLooper;
-import com.jsblock.block.StationNameStanding;
-import com.jsblock.block.SubsidyMachine1;
+import com.jsblock.block.*;
 import mtr.RegistryObject;
 import mtr.mappings.RegistryUtilities;
 import net.minecraft.world.level.block.entity.BlockEntityType;

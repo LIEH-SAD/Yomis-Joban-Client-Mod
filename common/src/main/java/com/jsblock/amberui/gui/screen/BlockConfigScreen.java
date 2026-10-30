@@ -2,10 +2,10 @@ package com.jsblock.amberui.gui.screen;
 
 import com.jsblock.amberui.gui.GuiHelper;
 import mtr.client.ClientData;
+import mtr.data.IGui;
 import mtr.data.RailwayData;
 import mtr.data.Station;
 import mtr.mappings.Text;
-import mtr.data.IGui;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 

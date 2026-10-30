@@ -28,8 +28,9 @@ public abstract class SavableScreen extends TitledScreen implements GuiHelper {
 			onClose2();
 		}).bounds(0, 0, 0, 20).build();
 
-		addRenderableWidget(saveButton);
-		addRenderableWidget(discardButton);
+		addWidget(saveButton);
+		addWidget(discardButton);
+		addRenderableWidget(bottomEntryWidget);
 
 		bottomEntryWidget.addWidget(saveButton);
 		bottomEntryWidget.addWidget(discardButton);
@@ -37,7 +38,7 @@ public abstract class SavableScreen extends TitledScreen implements GuiHelper {
 	}
 
 	@Override
-	protected void onClose2() {
+	public void onClose2() {
 		// Save config by default, unless explicitly requested not to
 		if(!discardConfig) {
 			onSave();

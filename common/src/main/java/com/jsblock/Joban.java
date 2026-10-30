@@ -18,12 +18,7 @@ import java.util.UUID;
 import java.util.function.BiConsumer;
 
 import static com.jsblock.Compatibilities.incompatible;
-import static com.jsblock.packet.IPacketJoban.PACKET_UPDATE_BUTTERFLY_CONFIG;
-import static com.jsblock.packet.IPacketJoban.PACKET_UPDATE_FARESAVER_CONFIG;
-import static com.jsblock.packet.IPacketJoban.PACKET_UPDATE_JOBAN_PIDS_CONFIG;
-import static com.jsblock.packet.IPacketJoban.PACKET_UPDATE_RV_PIDS_CONFIG;
-import static com.jsblock.packet.IPacketJoban.PACKET_UPDATE_SOUND_LOOPER_CONFIG;
-import static com.jsblock.packet.IPacketJoban.PACKET_UPDATE_SUBSIDY_CONFIG;
+import static com.jsblock.packet.IPacketJoban.*;
 
 /**
  * Main class for Joban Client Mod

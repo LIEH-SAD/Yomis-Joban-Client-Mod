@@ -11,7 +11,7 @@ import java.util.Collections;
 
 /**
  * Class responsible for reading/saving the config value.<br>
- * For config screen, see {@link com.jsblock.screen.ConfigScreen} and {@link com.jsblock.screen.ConfigScreenBase}
+ * For config screen, see {@link com.jsblock.screen.ClientConfigScreen}
  * @author LX86
  * @since 1.0.6
  */
@@ -113,6 +113,21 @@ public class ClientConfig {
         }
     }
 
+    /**
+     * Reset every option to its default value (does not write the file)
+     */
+    public static void loadDefaults() {
+        renderDisabled = false;
+        railRenderDisabled = false;
+        hideRidingVehicle = false;
+        bypassServerVersionCheck = false;
+        debugMode = false;
+        skipScriptParsing = false;
+        disableScriptRestrictions = false;
+        scriptDebugMode = false;
+        scriptShowLogSource = true;
+    }
+
     public static boolean getRenderDisabled() {
         return renderDisabled;
     }
@@ -173,9 +188,8 @@ public class ClientConfig {
         scriptShowLogSource = enabled;
     }
 
-    public static boolean setRenderDisabled(boolean disabled) {
+    public static void setRenderDisabled(boolean disabled) {
         renderDisabled = disabled;
-        return renderDisabled;
     }
 
     public static boolean setDebugMode(boolean enabled) {

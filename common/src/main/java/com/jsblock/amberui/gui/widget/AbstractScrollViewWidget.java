@@ -133,7 +133,8 @@ public abstract class AbstractScrollViewWidget extends AbstractWidget implements
 		return mouseX >= scrollbarStartX && mouseX <= scrollbarEndX && mouseY >= getY() && mouseY <= getY() + getHeight();
 	}
 
-	private boolean isMouseOver(double mouseX, double mouseY) {
+	@Override
+	public boolean isMouseOver(double mouseX, double mouseY) {
 		return mouseX >= getX() && mouseX <= getX() + getWidth() && mouseY >= getY() && mouseY <= getY() + getHeight();
 	}
 

@@ -1,6 +1,7 @@
 package com.jsblock.scripting.resource;
 
 import com.jsblock.client.ClientConfig;
+import com.jsblock.scripting.Scripting;
 import com.jsblock.scripting.core.ScriptManager;
 import com.jsblock.scripting.core.ScriptManager.ScriptingLanguageRegistry;
 import com.jsblock.scripting.core.rhino.RhinoJSLanguage;
@@ -8,20 +9,15 @@ import com.jsblock.scripting.core.rhino.RhinoParsedScript;
 import com.jsblock.scripting.core.util.ScriptResourceUtil;
 import com.jsblock.scripting.primitive.ParsedScript;
 import com.jsblock.scripting.primitive.ScriptContent;
-import com.jsblock.scripting.Scripting;
+import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
-import net.minecraft.client.Minecraft;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 

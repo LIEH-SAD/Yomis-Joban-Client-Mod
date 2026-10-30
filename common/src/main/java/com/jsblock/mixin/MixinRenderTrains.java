@@ -1,12 +1,12 @@
 package com.jsblock.mixin;
 
 import com.jsblock.client.ClientConfig;
+import com.mojang.blaze3d.vertex.PoseStack;
 import mtr.data.Rail;
 import mtr.render.RenderTrains;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
-import com.mojang.blaze3d.vertex.PoseStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

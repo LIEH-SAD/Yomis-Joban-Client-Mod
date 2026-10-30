@@ -1,12 +1,7 @@
 package com.jsblock.packet;
 
 import com.jsblock.Joban;
-import com.jsblock.block.ButterflyLight;
-import com.jsblock.block.FareSaver1;
-import com.jsblock.block.JobanPIDSBase;
-import com.jsblock.block.PIDSRVBase;
-import com.jsblock.block.SoundLooper;
-import com.jsblock.block.SubsidyMachine1;
+import com.jsblock.block.*;
 import io.netty.buffer.Unpooled;
 import mtr.Registry;
 import net.minecraft.core.BlockPos;
@@ -19,14 +14,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import java.util.HashSet;
 import java.util.Set;
 
-import static com.jsblock.packet.IPacketJoban.PACKET_OPEN_BUTTERFLY_CONFIG_SCREEN;
-import static com.jsblock.packet.IPacketJoban.PACKET_OPEN_FARESAVER_CONFIG_SCREEN;
-import static com.jsblock.packet.IPacketJoban.PACKET_OPEN_JOBAN_PIDS_CONFIG_SCREEN;
-import static com.jsblock.packet.IPacketJoban.PACKET_OPEN_RV_PIDS_CONFIG_SCREEN;
-import static com.jsblock.packet.IPacketJoban.PACKET_OPEN_SOUND_LOOPER_SCREEN;
-import static com.jsblock.packet.IPacketJoban.PACKET_OPEN_SUBSIDY_CONFIG_SCREEN;
-import static com.jsblock.packet.IPacketJoban.PACKET_PLAY_NETWORK_SOUND;
-import static com.jsblock.packet.IPacketJoban.PACKET_VERSION_CHECK;
+import static com.jsblock.packet.IPacketJoban.*;
 import static mtr.data.SerializedDataBase.PACKET_STRING_READ_LENGTH;
 
 /**

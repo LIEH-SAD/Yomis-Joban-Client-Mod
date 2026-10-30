@@ -27,7 +27,7 @@ public class ListViewWidget extends AbstractScrollViewWidget implements GuiHelpe
 		setX(x);
 		setY(y);
 		setWidth(width);
-		setHeight(height);
+		this.height = height;
 		setScroll(currentScroll);
 		positionWidgets(currentScroll);
 		refreshDisplayedList();

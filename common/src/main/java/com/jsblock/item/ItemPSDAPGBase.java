@@ -1,12 +1,10 @@
 package com.jsblock.item;
 
 import com.jsblock.Blocks;
-import com.jsblock.ItemGroups;
 import mtr.block.BlockPSDAPGBase;
 import mtr.block.BlockPSDTop;
 import mtr.block.IBlock;
 import mtr.block.ITripleBlock;
-import mtr.mappings.RegistryUtilities;
 import mtr.mappings.Text;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;

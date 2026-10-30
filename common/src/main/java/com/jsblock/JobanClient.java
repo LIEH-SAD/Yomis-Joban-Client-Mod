@@ -1,23 +1,11 @@
 package com.jsblock;
 
-import com.jsblock.block.PIDS1A;
-import com.jsblock.block.PIDSLCD;
-import com.jsblock.block.PIDSRV;
-import com.jsblock.block.PIDSRVSIL1;
-import com.jsblock.block.PIDSRVSIL2;
+import com.jsblock.block.*;
 import com.jsblock.client.ClientConfig;
 import com.jsblock.packet.IPacketJoban;
 import com.jsblock.packet.PacketClient;
 import com.jsblock.particle.LightBlockParticle;
-import com.jsblock.render.RenderConstantSignalLight;
-import com.jsblock.render.RenderDepartureTimer;
-import com.jsblock.render.RenderFaresaver1;
-import com.jsblock.render.RenderJobanPSDAPG;
-import com.jsblock.render.RenderKCRStationName;
-import com.jsblock.render.RenderLCDPIDS;
-import com.jsblock.render.RenderRVPIDS;
-import com.jsblock.render.RenderSignalLight;
-import com.jsblock.render.RenderStationNameTall;
+import com.jsblock.render.*;
 import com.jsblock.scripting.Scripting;
 import dev.architectury.injectables.annotations.ExpectPlatform;
 import mtr.RegistryClient;
