@@ -78,8 +78,12 @@ public class ArrivalWrapper {
         return route == null ? 0xFFFFFFFF : route.color;
     }
 
-    public Route.CircularState circularState() {
-        return route == null ? Route.CircularState.NONE : route.circularState;
+    /**
+     * The circular state of the arrival's route as its enum name ({@code NONE}, {@code CLOCKWISE}
+     * or {@code ANTICLOCKWISE}), so that no MTR type has to be exposed to scripts.
+     */
+    public String circularState() {
+        return (route == null ? Route.CircularState.NONE : route.circularState).name();
     }
 
     public long platformId() {

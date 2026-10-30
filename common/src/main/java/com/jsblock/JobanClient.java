@@ -19,7 +19,6 @@ import com.jsblock.render.RenderRVPIDS;
 import com.jsblock.render.RenderSignalLight;
 import com.jsblock.render.RenderStationNameTall;
 import com.jsblock.scripting.Scripting;
-import dev.architectury.event.events.client.ClientTickEvent;
 import dev.architectury.injectables.annotations.ExpectPlatform;
 import mtr.RegistryClient;
 import mtr.data.PIDSType;
@@ -118,10 +117,21 @@ public class JobanClient {
 
         /* Scripting engine: parsed lazily on the next resource reload */
         Scripting.init();
-        ClientTickEvent.CLIENT_POST.register(client -> Scripting.tick());
+        registerClientTick(Scripting::tick);
     }
 
     @ExpectPlatform
     public static void registerParticle(SimpleParticleType particle, ParticleProvider<SimpleParticleType> provider) {
+    }
+
+    /**
+     * Runs the task at the end of every client tick.
+     * <p>
+     * Architectury API is not a runtime dependency on Fabric, so this cannot use
+     * {@code dev.architectury.event.events.client.ClientTickEvent}: that class is not
+     * present at runtime and would crash on the first tick registration.
+     */
+    @ExpectPlatform
+    public static void registerClientTick(Runnable task) {
     }
 }

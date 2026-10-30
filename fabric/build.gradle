@@ -19,6 +19,10 @@ dependencies {
 	modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
 	modApi "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}"
 	modApi "com.terraformersmc:modmenu:${rootProject.mod_menu_version}"
+	// Mirrors the architectury-forge dependency in the forge module. Not needed by this mod's
+	// own code (it uses @ExpectPlatform instead), but other mods in the dev runtime and
+	// compiler/annotation processors expect it to be present.
+	modApi "${rootProject.architectury_id}:architectury-fabric:${rootProject.architectury_version}"
 
 	common(project(path: ":common", configuration: "namedElements")) { transitive false }
 	shadowCommon(project(path: ":common", configuration: "transformProductionFabric")) { transitive false }

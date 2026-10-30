@@ -23,6 +23,13 @@ public class ScriptRegistry {
         final MTRClassShutter classShutter = scriptManager.getClassShutter();
         classShutter.setEnabled(!ClientConfig.getDisableScriptRestrictions());
         classShutter.allowClass(ClassRule.parse("com.jsblock.scripting.*"));
+        // Minecraft value types that cross the script boundary: Resources.id() returns a
+        // ResourceLocation and PIDSWrapper.blockPos() returns a BlockPos. Without these rules
+        // Rhino throws "Access to Java class ... is prohibited" while wrapping the return value.
+        classShutter.allowClass(
+                ClassRule.parse("net.minecraft.resources.ResourceLocation"),
+                ClassRule.parse("net.minecraft.core.BlockPos")
+        );
 
         scriptManager.parseScriptEvent.register((contextName, script) -> {
             if ("pids".equals(contextName)) {
