@@ -21,6 +21,15 @@ configurations {
 	developmentForge.extendsFrom common
 }
 
+// Architectury Loom puts its Forge runtime helper on the classpath. It registers a
+// Yarn-only INameMappingService ("srgtoyarn") for the "srg" mapping, which collides with
+// Forge's own "srgtomcp" service and aborts ModLauncher startup before the game launches.
+// The project uses Mojang mappings, so the Yarn helper is not needed.
+configurations.configureEach {
+	exclude group: "dev.architectury", module: "architectury-loom-runtime"
+}
+
+
 dependencies {
 	forge "net.minecraftforge:forge:${rootProject.forge_version}"
 	modApi "${rootProject.architectury_id}:architectury-forge:${rootProject.architectury_version}"
@@ -42,13 +51,13 @@ shadowJar {
 	exclude "fabric.mod.json"
 
 	configurations = [project.configurations.shadowCommon]
-	classifier "dev-shadow"
+	archiveClassifier.set("dev-shadow")
 }
 
 remapJar {
 	input.set shadowJar.archiveFile
 	dependsOn shadowJar
-	classifier null
+	archiveClassifier.set(null)
 }
 
 components.java {
@@ -70,5 +79,24 @@ afterEvaluate {
 		if (task == tasks.build) {
 			task.finalizedBy tasks.moveForgeBuilds
 		}
+	}
+}
+
+tasks.register("dumpLoomRuntime") {
+	doLast {
+		configurations.each { c ->
+			if (c.canBeResolved) {
+				try {
+					def hit = c.resolvedConfiguration.lenientConfiguration.files.any { it.name.contains("architectury-loom-runtime") }
+					if (hit) println "HIT: " + c.name
+				} catch (Throwable ignored) { }
+			}
+		}
+	}
+}
+
+tasks.matching { it.name == "runClient" }.configureEach {
+	doFirst {
+		new File(project.projectDir, "launch-info.txt").text = "JVMARGS:\n" + jvmArgs.join("\n") + "\n\nSYS:\n" + (systemProperties.collect { k, v -> "$k=$v" }.join("\n")) + "\n\nARGS:\n" + args.join("\n")
 	}
 }

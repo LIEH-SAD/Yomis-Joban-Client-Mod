@@ -22,7 +22,9 @@ def is_1_20 = minecraft_version == "1.20"
 rootProject.ext.minecraft_version = minecraft_version
 rootProject.ext.mc_requirement = use_absolute_version ? minecraft_version : "${minecraft_major_version}.${minecraft_main_version}.x"
 rootProject.ext.architectury_version = getModrinthVersion("forge", minecraft_version, "architectury-api").split("\\+")[0]
-rootProject.ext.fabric_loader_version = new JsonSlurper().parse(("https://meta.fabricmc.net/v2/versions/loader/" + minecraft_version).toURL())[0]["loader"]["version"]
+// The newest loader is not necessarily compatible with the Minecraft version's mods or with the
+// Mixin build this project compiles against, so prefer an explicitly pinned version.
+rootProject.ext.fabric_loader_version = project.properties.containsKey("fabric_loader_version") ? project.getProperties().get("fabric_loader_version") : new JsonSlurper().parse(("https://meta.fabricmc.net/v2/versions/loader/" + minecraft_version).toURL())[0]["loader"]["version"]
 rootProject.ext.yarn_version = new JsonSlurper().parse(("https://meta.fabricmc.net/v2/versions/yarn/" + minecraft_version).toURL())[0]["version"]
 rootProject.ext.fabric_api_version = getModrinthVersion("fabric", minecraft_version, "fabric-api")
 rootProject.ext.forge_version = minecraft_version + "-" + new JsonSlurper().parse(("https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json").toURL())["promos"][minecraft_version + "-latest"]
@@ -53,11 +55,24 @@ subprojects {
 		}
 
 		implementation files("../checkouts/${project.properties.containsKey("mtr_artifact_id") ? project.mtr_artifact_id : minecraft_version}/mtr-common.jar")
-		implementation("org.spongepowered:mixin:0.8.5")
+		// Compile-only: at runtime the loader/Forge must provide the (patched) Mixin build.
+		// Shipping the plain 0.8.5 jar puts an outdated Mixin on the classpath that shadows
+		// the loader's sponge-mixin and breaks every Fabric API mixin in dev.
+		compileOnly("org.spongepowered:mixin:0.8.5")
 		annotationProcessor("org.spongepowered:mixin:0.8.5:processor")
 	}
 
 	build.finalizedBy(mergeJars)
+
+	// Gradle 8.5's JavaExec forks the game from an internal copy of its JVM args and no longer
+	// calls the overridden getJvmArgs(). Architectury Loom injects the @argfile, the transformer
+	// -javaagent and the -Darchitectury.* flags through that getter, so they would be dropped and
+	// the game would launch without a classpath. Re-apply them right before the fork.
+	tasks.withType(JavaExec).configureEach {
+		doFirst {
+			setJvmArgs(jvmArgs)
+		}
+	}
 }
 
 forgix {
