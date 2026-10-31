@@ -125,7 +125,7 @@ public abstract class PIDSDrawCall<T extends PIDSDrawCall<T>> {
     public static int parseColor(Object obj, int defaultColor) {
         if (obj == null) return defaultColor;
         if (obj instanceof Number) return ((Number) obj).intValue();
-        if (obj == org.mozilla.javascript.Undefined.instance) return defaultColor;
+        if (obj == com.jsblock.lib.org.mozilla.javascript.Undefined.instance) return defaultColor;
 
         String str = String.valueOf(obj).trim();
         if (str.startsWith("#")) str = str.substring(1);

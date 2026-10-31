@@ -1,7 +1,21 @@
+configurations {
+	// Resolved by the :rhino project to build its relocated copy of the engine.
+	// Declared here because only Loom projects can resolve Maven dependencies
+	// offline in this build.
+	rhinoEngine {
+		canBeConsumed = false
+		canBeResolved = true
+	}
+}
+
 dependencies {
 	modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
 	modApi "${rootProject.architectury_id}:architectury:${rootProject.architectury_version}"
-	implementation "org.mozilla:rhino:${rootProject.rhino_version}"
+
+	// Rhino is compiled into the mod from relocated sources (see :rhino), so other
+	// mods that bundle their own Rhino copy cannot shadow it at runtime.
+	implementation project(":rhino")
+	rhinoEngine "org.mozilla:rhino:${rootProject.rhino_version}"
 }
 
 architectury {

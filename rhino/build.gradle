@@ -1,0 +1,37 @@
+// Repackages the Rhino engine into a private package.
+//
+// Minecraft mods all live on a single class loader, so an unrelocated
+// `org.mozilla.javascript` clashes with any other mod that ships its own Rhino
+// copy (WorldEdit does, for example). Whichever copy is loaded first wins for
+// both mods, and an older copy silently loses features - e.g. template
+// literals stop being interpolated. Relocating the engine here guarantees the
+// scripting layer always talks to the Rhino it was built against.
+
+plugins {
+	id "java"
+	id "com.github.johnrengelman.shadow"
+}
+
+def relocatedPackage = "com.jsblock.lib.org.mozilla"
+
+// The engine jar is resolved through :common, whose Loom-provided repositories
+// are the ones able to serve it from the shared Gradle cache (offline builds).
+def rhinoEngineFiles = project(":common").configurations.rhinoEngine
+
+tasks.register("relocatedRhino", com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
+	description = "Relocates the Rhino engine into ${relocatedPackage}"
+	archiveClassifier.set("relocated")
+	destinationDirectory.set(layout.buildDirectory.dir("relocated"))
+
+	from(rhinoEngineFiles)
+	relocate "org.mozilla", relocatedPackage
+	// Signature files of the original jar would no longer match
+	exclude "META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA", "META-INF/MANIFEST.MF"
+}
+
+// Consumers (common, fabric, forge) must receive the relocated jar instead of
+// this project's own empty one.
+artifacts {
+	add("apiElements", tasks.named("relocatedRhino"))
+	add("runtimeElements", tasks.named("relocatedRhino"))
+}

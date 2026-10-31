@@ -37,9 +37,11 @@ dependencies {
 	common(project(path: ":common", configuration: "namedElements")) { transitive false }
 	shadowCommon(project(path: ":common", configuration: "transformProductionForge")) { transitive = false }
 
-	// Rhino is bundled with the mod: it is not provided by Minecraft nor by MTR
-	implementation "org.mozilla:rhino:${rootProject.rhino_version}"
-	shadowCommon("org.mozilla:rhino:${rootProject.rhino_version}") { transitive = false }
+	// Rhino is bundled with the mod: it is not provided by Minecraft nor by MTR.
+	// It is relocated into a private package by :rhino so that other mods' own
+	// Rhino copies can never shadow it.
+	implementation project(":rhino")
+	shadowCommon(project(":rhino")) { transitive = false }
 }
 
 processResources {

@@ -1,9 +1,9 @@
 package com.jsblock.scripting.core.rhino;
 
-import org.mozilla.javascript.Callable;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.ContextFactory;
-import org.mozilla.javascript.Scriptable;
+import com.jsblock.lib.org.mozilla.javascript.Callable;
+import com.jsblock.lib.org.mozilla.javascript.Context;
+import com.jsblock.lib.org.mozilla.javascript.ContextFactory;
+import com.jsblock.lib.org.mozilla.javascript.Scriptable;
 
 /**
  * Rhino context factory that aborts runaway scripts after a fixed amount of wall-clock time.

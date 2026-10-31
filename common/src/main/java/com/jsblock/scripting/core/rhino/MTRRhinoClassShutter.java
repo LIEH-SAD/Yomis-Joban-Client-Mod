@@ -1,6 +1,6 @@
 package com.jsblock.scripting.core.rhino;
 
-import org.mozilla.javascript.ClassShutter;
+import com.jsblock.lib.org.mozilla.javascript.ClassShutter;
 
 /**
  * Bridges the scripting class shutter to Rhino.

@@ -29,6 +29,6 @@ public class JavaUtilJS {
     }
 
     public boolean isNull(Object obj) {
-        return obj == null || obj == org.mozilla.javascript.Undefined.instance;
+        return obj == null || obj == com.jsblock.lib.org.mozilla.javascript.Undefined.instance;
     }
 }

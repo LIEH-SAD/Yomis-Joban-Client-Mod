@@ -37,7 +37,7 @@ public class MTRClassShutter {
                 ClassRule.parse("com.jsblock.scripting.pids.*"),
                 ClassRule.parse("com.jsblock.scripting.resource.*"),
                 // Rhino JS engine
-                ClassRule.parse("org.mozilla.javascript.*")
+                ClassRule.parse("com.jsblock.lib.org.mozilla.javascript.*")
         );
         denyClass(
                 ClassRule.parse("java.lang.invoke.*"),

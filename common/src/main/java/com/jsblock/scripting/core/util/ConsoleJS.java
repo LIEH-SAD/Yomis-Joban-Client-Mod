@@ -2,10 +2,10 @@ package com.jsblock.scripting.core.util;
 
 import com.jsblock.Joban;
 import com.jsblock.client.ClientConfig;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.NativeJSON;
-import org.mozilla.javascript.NativeObject;
-import org.mozilla.javascript.RhinoException;
+import com.jsblock.lib.org.mozilla.javascript.Context;
+import com.jsblock.lib.org.mozilla.javascript.NativeJSON;
+import com.jsblock.lib.org.mozilla.javascript.NativeObject;
+import com.jsblock.lib.org.mozilla.javascript.RhinoException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -126,7 +126,7 @@ public class ConsoleJS {
                 if (obj instanceof NativeObject) {
                     final Context cx = Context.getCurrentContext();
                     if (cx != null) {
-                        sb.append(NativeJSON.stringify(cx, (org.mozilla.javascript.Scriptable) obj, obj, null, " "));
+                        sb.append(NativeJSON.stringify(cx, (com.jsblock.lib.org.mozilla.javascript.Scriptable) obj, obj, null, " "));
                     } else {
                         sb.append(obj);
                     }

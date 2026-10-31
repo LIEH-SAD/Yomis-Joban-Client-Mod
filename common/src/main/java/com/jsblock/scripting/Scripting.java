@@ -94,6 +94,7 @@ public final class Scripting {
         final Minecraft minecraft = Minecraft.getInstance();
         TimingJS.update(minecraft != null && minecraft.isPaused());
         getInstanceManager().tick();
+        PidsScriptSelfTest.tick();
     }
 
     /**

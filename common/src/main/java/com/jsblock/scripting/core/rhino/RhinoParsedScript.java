@@ -7,7 +7,7 @@ import com.jsblock.scripting.primitive.ParsedScript;
 import com.jsblock.scripting.primitive.ScriptContent;
 import com.jsblock.scripting.primitive.ScriptInstance;
 import net.minecraft.resources.ResourceLocation;
-import org.mozilla.javascript.*;
+import com.jsblock.lib.org.mozilla.javascript.*;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -197,12 +197,12 @@ public class RhinoParsedScript extends ParsedScript {
     private static String cleanRhinoExceptionMessage(String s) {
         String errorMessage = s == null ? "Unknown script error" : s;
         if (likelyDueToUndefinedParam(errorMessage)) {
-            errorMessage = errorMessage.replace("org.mozilla.javascript.Undefined", "UNDEFINED");
+            errorMessage = errorMessage.replace("com.jsblock.lib.org.mozilla.javascript.Undefined", "UNDEFINED");
         }
         return errorMessage;
     }
 
     private static boolean likelyDueToUndefinedParam(String s) {
-        return s != null && (s.startsWith("Can't find method") || s.startsWith("Java constructor for")) && s.contains("org.mozilla.javascript.Undefined");
+        return s != null && (s.startsWith("Can't find method") || s.startsWith("Java constructor for")) && s.contains("com.jsblock.lib.org.mozilla.javascript.Undefined");
     }
 }

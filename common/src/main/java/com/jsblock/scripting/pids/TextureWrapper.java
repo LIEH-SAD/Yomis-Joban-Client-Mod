@@ -99,7 +99,7 @@ public class TextureWrapper extends PIDSDrawCall<TextureWrapper> {
     }
 
     static ResourceLocation toTexture(Object obj) {
-        if (obj == null || obj == org.mozilla.javascript.Undefined.instance) return null;
+        if (obj == null || obj == com.jsblock.lib.org.mozilla.javascript.Undefined.instance) return null;
         if (obj instanceof ResourceLocation) return (ResourceLocation) obj;
         final String str = String.valueOf(obj);
         if (str.contains(":")) return new ResourceLocation(str);

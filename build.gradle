@@ -21,14 +21,15 @@ def is_1_20 = minecraft_version == "1.20"
 
 rootProject.ext.minecraft_version = minecraft_version
 rootProject.ext.mc_requirement = use_absolute_version ? minecraft_version : "${minecraft_major_version}.${minecraft_main_version}.x"
-rootProject.ext.architectury_version = getModrinthVersion("forge", minecraft_version, "architectury-api").split("\\+")[0]
+def offlineFallback = { Closure<String> remote, String fallback -> try { return remote.call() } catch (Throwable ignored) { return fallback } }
+rootProject.ext.architectury_version = offlineFallback({ getModrinthVersion("forge", minecraft_version, "architectury-api").split("\\+")[0] }, "9.2.14")
 // The newest loader is not necessarily compatible with the Minecraft version's mods or with the
 // Mixin build this project compiles against, so prefer an explicitly pinned version.
 rootProject.ext.fabric_loader_version = project.properties.containsKey("fabric_loader_version") ? project.getProperties().get("fabric_loader_version") : new JsonSlurper().parse(("https://meta.fabricmc.net/v2/versions/loader/" + minecraft_version).toURL())[0]["loader"]["version"]
-rootProject.ext.yarn_version = new JsonSlurper().parse(("https://meta.fabricmc.net/v2/versions/yarn/" + minecraft_version).toURL())[0]["version"]
-rootProject.ext.fabric_api_version = getModrinthVersion("fabric", minecraft_version, "fabric-api")
-rootProject.ext.forge_version = minecraft_version + "-" + new JsonSlurper().parse(("https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json").toURL())["promos"][minecraft_version + "-latest"]
-rootProject.ext.mod_menu_version = getModrinthVersion("fabric", minecraft_version, "modmenu")
+rootProject.ext.yarn_version = offlineFallback({ new JsonSlurper().parse(("https://meta.fabricmc.net/v2/versions/yarn/" + minecraft_version).toURL())[0]["version"] }, "1.20+build.1")
+rootProject.ext.fabric_api_version = offlineFallback({ getModrinthVersion("fabric", minecraft_version, "fabric-api") }, "0.83.0+1.20")
+rootProject.ext.forge_version = offlineFallback({ minecraft_version + "-" + new JsonSlurper().parse(("https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json").toURL())["promos"][minecraft_version + "-latest"] }, "1.20-46.0.14")
+rootProject.ext.mod_menu_version = offlineFallback({ getModrinthVersion("fabric", minecraft_version, "modmenu") }, "7.0.1")
 rootProject.ext.architectury_id = minecraft_main_version == 16 ? "me.shedaniel" : "dev.architectury"
 
 architectury {
@@ -36,6 +37,11 @@ architectury {
 }
 
 subprojects {
+	// :rhino only repackages the Rhino engine and must not be touched by Loom
+	if (project.name == "rhino") {
+		return
+	}
+
 	apply plugin: "dev.architectury.loom"
 
 	loom {
