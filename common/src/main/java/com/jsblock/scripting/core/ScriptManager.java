@@ -74,7 +74,7 @@ public class ScriptManager {
         script.exposeClassMethod("print", findMethod(ScriptResourceUtil.class, "print", Object[].class));
         script.exposeClassInstance("Resources", new ResourcesJS());
         script.exposeClass("TextUtil", TextUtilJS.class);
-        script.exposeClass("PIDSUtil", PIDSUtilJS.class);
+        script.exposeClass("MinecraftClient", MinecraftClientJS.class);
         script.exposeClassInstance("Java", new JavaUtilJS());
         script.exposeClassInstance("console", new ConsoleJS());
         script.exposeClassInstance("Timing", new TimingJS());

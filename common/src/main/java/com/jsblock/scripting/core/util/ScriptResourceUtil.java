@@ -7,8 +7,10 @@ import net.minecraft.resources.ResourceLocation;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.file.FileSystems;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.Stack;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
@@ -19,16 +21,19 @@ import java.util.function.Supplier;
  */
 public class ScriptResourceUtil {
     private static final Stack<ResourceLocation> scriptLocationStack = new Stack<>();
+    private static final Set<String> includedScripts = new HashSet<>();
     private static ParsedScript activeParsingScript;
     private static final Map<String, DataReaderJS> dataCache = new ConcurrentHashMap<>();
 
     public static void beginParseScript(ParsedScript parsedScript) {
         if (activeParsingScript != null) throw new IllegalStateException("Must call finishParseScript() before beginParseScript()!");
         activeParsingScript = parsedScript;
+        includedScripts.clear();
     }
 
     public static void finishParseScript() {
         activeParsingScript = null;
+        includedScripts.clear();
     }
 
     public static void executeScript(ParsedScript script, ResourceLocation scriptLocation, String scriptContent) {
@@ -43,6 +48,9 @@ public class ScriptResourceUtil {
             throw new RuntimeException("Cannot use include() in the runtime stage, all scripts have already been parsed at this point!");
         }
         final ResourceLocation identifier = pathOrIdentifier instanceof ResourceLocation ? (ResourceLocation) pathOrIdentifier : idr(pathOrIdentifier.toString());
+        /* Including the same file twice in one script would execute its top-level declarations twice,
+           which Rhino rejects as a redeclaration. Upstream scripts never rely on that, so skip it. */
+        if (!includedScripts.add(identifier.toString())) return;
         final DataReaderJS scriptFile = read(identifier);
         if (scriptFile == null) throw new IllegalStateException(String.format("Failed to include script %s:%s as it is not found.", identifier.getNamespace(), identifier.getPath()));
         executeScript(activeParsingScript, identifier, scriptFile.asString());
