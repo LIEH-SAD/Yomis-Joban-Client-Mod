@@ -26,7 +26,7 @@ import static com.jsblock.packet.IPacketJoban.*;
  * @since 1.0.0
  */
 public class Joban {
-    private static final String VERSION = "1.2.2";
+    private static final String VERSION = "1.3.0";
     private static int gameTick = 0;
     public static final String MIN_MTR_VERSION = "3.2.2";
     public static final String MOD_ID = "jsblock";
@@ -41,7 +41,7 @@ public class Joban {
             RegisterParticle registerParticle
     ) {
         LOGGER.info("[Joban Client] Version " + VERSION);
-        LOGGER.warn("[Joban Client 1.20] Welcome fellow adventurer! I hope you know what you're doing...");
+        LOGGER.warn("[Joban Client 1.3.0] Welcome fellow adventurer! I hope you know what you're doing...");
         /* Check MTR Compatibility */
         String mtrVersion = getMTRVersion();
         if(Compatibilities.lowerThanMin(MIN_MTR_VERSION, mtrVersion)) {

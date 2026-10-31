@@ -10,9 +10,13 @@
 		"AozoraSky",
 		"Yomi_307"
 	],
+	"contributors": [
+		"LIEH-SAD"
+	],
 	"contact": {
 		"homepage": "https://discord.gg/FNc2rgWmP2",
-		"sources": ""
+		"sources": "",
+		"issues": "https://github.com/LIEH-SAD/Yomis-Joban-Client-Mod/issues/"
 	},
 	"license": "All Rights Reserved",
 	"icon": "icon.png",

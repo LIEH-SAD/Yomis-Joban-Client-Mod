@@ -1,12 +1,14 @@
 modLoader = "javafml"
 loaderVersion = "[36,)"
 license="All Rights Reserved"
+issueTrackerURL = "https://github.com/LIEH-SAD/Yomis-Joban-Client-Mod/issues"
 
 [[mods]]
 modId = "jsblock"
 version = "${version}"
 displayName = "Yomi's Joban Client Mod"
 authors = "LX86, StrikeSNC, AozoraSky, Yomi_307"
+credits = "LIEH-SAD"
 description = "Add static signal light, PIDS and HK-Specific decoration blocks to the MTR Mod."
 logoFile = "icon.png"
 updateJSONURL = "https://api.modrinth.com/updates/jcm/forge_updates.json"
