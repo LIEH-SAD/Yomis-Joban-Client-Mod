@@ -1,7 +1,6 @@
 package com.jsblock.render;
 
 import com.jsblock.block.StationNameStanding;
-import com.jsblock.client.ClientConfig;
 import mtr.block.BlockStationNameTallBase;
 import mtr.block.IBlock;
 import mtr.client.ClientData;
@@ -34,7 +33,6 @@ public class RenderStationNameTall<T extends BlockStationNameTallBase.TileEntity
 
     @Override
     protected void drawStationName(BlockGetter world, BlockPos pos, BlockState state, Direction facing, StoredMatrixTransformations storedMatrixTransformations, MultiBufferSource vertexConsumers, String stationName, int stationColor, int color, int light) {
-        if (ClientConfig.getRenderDisabled()) return;
         if (IBlock.getStatePropertySafe(state, BlockStationNameTallBase.THIRD) == IBlock.EnumThird.MIDDLE) {
             RenderTrains.scheduleRender(ClientData.DATA_CACHE.getTallStationName(color, stationName, stationColor, WIDTH / HEIGHT).resourceLocation, false, MoreRenderLayers::getExterior, (matrices, vertexConsumer) -> {
                 storedMatrixTransformations.transform(matrices);

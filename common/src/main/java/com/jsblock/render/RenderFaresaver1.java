@@ -1,7 +1,6 @@
 package com.jsblock.render;
 
 import com.jsblock.block.FareSaver1;
-import com.jsblock.client.ClientConfig;
 import com.mojang.blaze3d.vertex.PoseStack;
 import mtr.block.IBlock;
 import mtr.client.Config;
@@ -38,7 +37,7 @@ public class RenderFaresaver1<T extends BlockEntityMapper> extends BlockEntityRe
     public void render(T entity, float delta, PoseStack matrices, MultiBufferSource vertexConsumers, int light, int overlay) {
         final Level world = entity.getLevel();
         final BlockPos pos = entity.getBlockPos();
-        if (world == null || ClientConfig.getRenderDisabled()) {
+        if (world == null) {
             return;
         }
 

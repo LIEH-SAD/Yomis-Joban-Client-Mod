@@ -10,6 +10,14 @@ import java.util.List;
  * @author LX86 (JCM)
  */
 public class MTRClassShutter {
+    /**
+     * Root packages that Forgix prepends to every class it packs into the merged distribution jar,
+     * e.g. {@code com.jsblock.scripting.api.TextWrapper} becomes
+     * {@code fabric.com.jsblock.scripting.api.TextWrapper}. Rules are written against the
+     * unrelocated names, so both spellings have to match.
+     */
+    private static final String[] RELOCATION_PREFIXES = {"fabric.", "forge.", "quilt."};
+
     private boolean shutterEnabled = true;
     private final List<ClassRule> allowedScriptClasses = new ArrayList<>();
     private final List<ClassRule> deniedScriptClasses = new ArrayList<>();
@@ -88,9 +96,9 @@ public class MTRClassShutter {
         }
 
         for (final ClassRule allowedClassRule : allowedScriptClasses) {
-            if (allowedClassRule.match(className)) {
+            if (allowedClassRule.match(className) || allowedClassRule.match(stripRelocationPrefix(className))) {
                 for (final ClassRule deniedClassRule : deniedScriptClasses) {
-                    if (deniedClassRule.match(className)) {
+                    if (deniedClassRule.match(className) || deniedClassRule.match(stripRelocationPrefix(className))) {
                         return false;
                     }
                 }
@@ -98,5 +106,14 @@ public class MTRClassShutter {
             }
         }
         return false;
+    }
+
+    private static String stripRelocationPrefix(String className) {
+        for (final String prefix : RELOCATION_PREFIXES) {
+            if (className.startsWith(prefix) && className.length() > prefix.length()) {
+                return className.substring(prefix.length());
+            }
+        }
+        return className;
     }
 }

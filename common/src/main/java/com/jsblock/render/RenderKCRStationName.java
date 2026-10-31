@@ -2,7 +2,6 @@ package com.jsblock.render;
 
 import com.jsblock.block.FontBase;
 import com.jsblock.block.KCRNameSign;
-import com.jsblock.client.ClientConfig;
 import com.jsblock.screen.IDrawingJoban;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
@@ -45,7 +44,7 @@ public class RenderKCRStationName<T extends BlockEntityMapper> extends BlockEnti
         final Level world = entity.getLevel();
         final BlockPos pos = entity.getBlockPos();
         final String fontName = ((FontBase.TileEntityBlockFontBase)entity).getFont();
-        if (world == null || ClientConfig.getRenderDisabled()) {
+        if (world == null) {
             return;
         }
 

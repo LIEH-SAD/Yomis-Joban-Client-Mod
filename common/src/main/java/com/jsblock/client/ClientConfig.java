@@ -17,9 +17,6 @@ import java.util.Collections;
  */
 public class ClientConfig {
     private static final String CONFIG_PATH = System.getProperty("user.dir") + "/config/" + "jsclient.json";
-    private static boolean renderDisabled = false;
-    private static boolean railRenderDisabled = false;
-    private static boolean hideRidingVehicle = false;
     private static boolean bypassServerVersionCheck = false;
     private static boolean debugMode = false;
     private static boolean skipScriptParsing = false;
@@ -45,24 +42,12 @@ public class ClientConfig {
         try {
             final JsonObject jsonConfig = new JsonParser().parse(String.join("", Files.readAllLines(Paths.get(CONFIG_PATH)))).getAsJsonObject();
 
-            if (jsonConfig.has("renderDisabled")) {
-                renderDisabled = jsonConfig.get("renderDisabled").getAsBoolean();
-            }
-
             if(jsonConfig.has("bypassVersionCheck")) {
                 bypassServerVersionCheck = jsonConfig.get("bypassVersionCheck").getAsBoolean();
             }
 
             if(jsonConfig.has("debugMode")) {
                 debugMode = jsonConfig.get("debugMode").getAsBoolean();
-            }
-
-            if(jsonConfig.has("disableRailRendering")) {
-                railRenderDisabled = jsonConfig.get("disableRailRendering").getAsBoolean();
-            }
-
-            if(jsonConfig.has("hideRidingVehicle")) {
-                hideRidingVehicle = jsonConfig.get("hideRidingVehicle").getAsBoolean();
             }
 
             if(jsonConfig.has("skipScriptParsing")) {
@@ -96,9 +81,6 @@ public class ClientConfig {
     public static void writeConfig() {
         Joban.LOGGER.info("[Joban Client] Writing Config...");
         final JsonObject jsonConfig = new JsonObject();
-        jsonConfig.addProperty("renderDisabled", renderDisabled);
-        jsonConfig.addProperty("disableRailRendering", railRenderDisabled);
-        jsonConfig.addProperty("hideRidingVehicle", hideRidingVehicle);
         jsonConfig.addProperty("bypassVersionCheck", bypassServerVersionCheck);
         jsonConfig.addProperty("debugMode", debugMode);
         jsonConfig.addProperty("skipScriptParsing", skipScriptParsing);
@@ -117,9 +99,6 @@ public class ClientConfig {
      * Reset every option to its default value (does not write the file)
      */
     public static void loadDefaults() {
-        renderDisabled = false;
-        railRenderDisabled = false;
-        hideRidingVehicle = false;
         bypassServerVersionCheck = false;
         debugMode = false;
         skipScriptParsing = false;
@@ -128,24 +107,12 @@ public class ClientConfig {
         scriptShowLogSource = true;
     }
 
-    public static boolean getRenderDisabled() {
-        return renderDisabled;
-    }
-
     public static boolean getVersionCheckDisabled() {
         return bypassServerVersionCheck;
     }
 
     public static boolean getDebugModeEnabled() {
         return debugMode;
-    }
-
-    public static boolean getRailRenderDisabled() {
-        return railRenderDisabled;
-    }
-
-    public static boolean getHideRidingVehicle() {
-        return hideRidingVehicle;
     }
 
     public static boolean getSkipScriptParsing() {
@@ -164,14 +131,6 @@ public class ClientConfig {
         return scriptShowLogSource;
     }
 
-    public static void setRailRenderDisabled(boolean disabled) {
-        railRenderDisabled = disabled;
-    }
-
-    public static void setHideRidingVehicle(boolean hidden) {
-        hideRidingVehicle = hidden;
-    }
-
     public static void setSkipScriptParsing(boolean skip) {
         skipScriptParsing = skip;
     }
@@ -186,10 +145,6 @@ public class ClientConfig {
 
     public static void setScriptShowLogSource(boolean enabled) {
         scriptShowLogSource = enabled;
-    }
-
-    public static void setRenderDisabled(boolean disabled) {
-        renderDisabled = disabled;
     }
 
     public static boolean setDebugMode(boolean enabled) {

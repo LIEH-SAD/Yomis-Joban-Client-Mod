@@ -24,9 +24,6 @@ public class JobanClient {
 
     public static void init() {
         ClientConfig.loadConfig();
-        if (ClientConfig.getRenderDisabled()) {
-            Joban.LOGGER.info("[Joban Client] Rendering for all JCM blocks are disabled.");
-        }
 
         /* Allow transparent texture for the block */
         RegistryClient.registerBlockRenderType(RenderType.cutout(), Blocks.APG_DOOR_DRL.get());

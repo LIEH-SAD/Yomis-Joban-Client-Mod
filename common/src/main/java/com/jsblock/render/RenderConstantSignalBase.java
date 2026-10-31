@@ -1,6 +1,5 @@
 package com.jsblock.render;
 
-import com.jsblock.client.ClientConfig;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import mtr.block.BlockSignalLightBase;
@@ -39,7 +38,7 @@ public abstract class RenderConstantSignalBase<T extends BlockEntityMapper> exte
     @Override
     public final void render(T entity, float delta, PoseStack matrices, MultiBufferSource vertexConsumers, int light, int overlay) {
         final Level world = entity.getLevel();
-        if (world == null || ClientConfig.getRenderDisabled()) {
+        if (world == null) {
             return;
         }
 

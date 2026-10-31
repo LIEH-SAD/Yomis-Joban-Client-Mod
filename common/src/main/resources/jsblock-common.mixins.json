@@ -3,13 +3,8 @@
   "package": "com.jsblock.mixin",
   "compatibilityLevel": "JAVA_8",
   "minVersion": "0.8",
-  "client": [
-    "MixinJonModelTrainRenderer",
-    "MixinRenderTrains"
-  ],
   "mixins": [
-    "MixinTicketBarrier",
-    "MixinTrainAccessor"
+    "MixinTicketBarrier"
   ],
   "injectors": {
     "defaultRequire": 1

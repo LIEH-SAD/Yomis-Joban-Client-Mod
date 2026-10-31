@@ -40,7 +40,7 @@ public class RhinoParsedScript extends ParsedScript {
         try {
             final Context cx = Context.enter();
             try {
-                cx.setLanguageVersion(Context.VERSION_ES6);
+                MTRRhinoContextFactory.prepare(cx);
                 cx.setClassShutter(new MTRRhinoClassShutter(scriptManager.getClassShutter()));
                 scope = new ImporterTopLevel(cx);
                 parseScriptContent("\"use strict\";", "Use Strict Statement");
@@ -120,7 +120,7 @@ public class RhinoParsedScript extends ParsedScript {
             try {
                 final Context cx = Context.enter();
                 try {
-                    cx.setLanguageVersion(Context.VERSION_ES6);
+                    MTRRhinoContextFactory.prepare(cx);
                     cx.setClassShutter(new MTRRhinoClassShutter(scriptManager.getClassShutter()));
                     timing.prepareForScript(scriptInstance);
                     scriptInstance.beginTrackExecuteTime();

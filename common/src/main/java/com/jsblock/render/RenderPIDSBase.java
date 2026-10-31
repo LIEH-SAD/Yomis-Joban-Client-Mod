@@ -3,7 +3,6 @@ package com.jsblock.render;
 import com.jsblock.block.BlockPIDSBaseHorizontal;
 import com.jsblock.block.JobanPIDSBase;
 import com.jsblock.block.PIDSRVBase;
-import com.jsblock.client.ClientConfig;
 import com.jsblock.client.JobanCustomResources;
 import com.jsblock.data.PIDSPreset;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -47,7 +46,7 @@ public abstract class RenderPIDSBase<T extends BlockEntityMapper> extends BlockE
     @Override
     public void render(T entity, float delta, PoseStack matrices, MultiBufferSource vertexConsumers, int light, int overlay) {
         final Level world = entity.getLevel();
-        if (world == null || ClientConfig.getRenderDisabled()) {
+        if (world == null) {
             return;
         }
 

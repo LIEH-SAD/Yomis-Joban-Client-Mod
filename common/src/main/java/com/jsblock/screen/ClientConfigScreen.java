@@ -42,9 +42,6 @@ public class ClientConfigScreen extends TitledScreen implements GuiHelper {
 	private static final int STAR_ROTATION_LENGTH = 260 * 1000;
 
 	private final WidgetSet bottomRowWidget;
-	private final WidgetBetterCheckbox disableRenderingButton;
-	private final WidgetBetterCheckbox disableRailRenderingButton;
-	private final WidgetBetterCheckbox hideRidingVehicleButton;
 	private final WidgetBetterCheckbox ignoreVersionCheckButton;
 	private final WidgetBetterCheckbox debugModeButton;
 	private final WidgetBetterCheckbox disableScriptingButton;
@@ -62,9 +59,6 @@ public class ClientConfigScreen extends TitledScreen implements GuiHelper {
 		linkedConfig = new HashMap<>();
 		linkedSetter = new HashMap<>();
 
-		this.disableRenderingButton = checkboxForConfig(ClientConfig::getRenderDisabled, ClientConfig::setRenderDisabled);
-		this.disableRailRenderingButton = checkboxForConfig(ClientConfig::getRailRenderDisabled, ClientConfig::setRailRenderDisabled);
-		this.hideRidingVehicleButton = checkboxForConfig(ClientConfig::getHideRidingVehicle, ClientConfig::setHideRidingVehicle);
 		this.ignoreVersionCheckButton = checkboxForConfig(ClientConfig::getVersionCheckDisabled, ClientConfig::setVersionCheckDisabled);
 		this.debugModeButton = checkboxForConfig(ClientConfig::getDebugModeEnabled, ClientConfig::setDebugMode);
 		this.disableScriptingButton = checkboxForConfig(ClientConfig::getSkipScriptParsing, ClientConfig::setSkipScriptParsing);
@@ -121,9 +115,6 @@ public class ClientConfigScreen extends TitledScreen implements GuiHelper {
 
 		// General
 		listViewWidget.addCategory(Text.translatable("gui.jsblock.config.listview.category.general"));
-		listViewWidget.add(Text.translatable("gui.jsblock.config.listview.title.disable_rendering"), new MappedWidget(disableRenderingButton));
-		listViewWidget.add(Text.translatable("gui.jsblock.config.listview.title.disable_rail_rendering"), new MappedWidget(disableRailRenderingButton));
-		listViewWidget.add(Text.translatable("gui.jsblock.config.listview.title.hide_riding_vehicle"), new MappedWidget(hideRidingVehicleButton));
 		listViewWidget.add(Text.translatable("gui.jsblock.config.listview.title.ignore_version_check"), new MappedWidget(ignoreVersionCheckButton));
 
 		// Debug
