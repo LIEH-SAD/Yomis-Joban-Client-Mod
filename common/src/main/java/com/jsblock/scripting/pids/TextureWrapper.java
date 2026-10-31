@@ -66,6 +66,27 @@ public class TextureWrapper extends PIDSDrawCall<TextureWrapper> {
         return this;
     }
 
+    /**
+     * Select the render layer. Only {@code EXTERIOR} layers take the world light level;
+     * the others are drawn fully lit.
+     */
+    public TextureWrapper renderType(String renderType) {
+        this.naturalLight = naturalLight || (renderType != null && renderType.toUpperCase(java.util.Locale.ROOT).startsWith("EXTERIOR"));
+        return this;
+    }
+
+    @Override
+    public TextureWrapper zOrder(int order) {
+        super.zOrder(order);
+        return this;
+    }
+
+    @Override
+    public TextureWrapper matrices(com.jsblock.scripting.api.Matrices matrices) {
+        super.matrices(matrices);
+        return this;
+    }
+
     @Override
     public boolean validate() {
         return super.validate() && texture != null;

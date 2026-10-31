@@ -154,6 +154,8 @@ public class PIDSPreset {
         }
 
         final ResourceLocation thumbnail = getResourceLocation(json, "thumbnail");
+        /* JCM 2.3's ScriptPIDSPreset never draws the clock or the weather icon */
+        final boolean scripted = !scriptContents.isEmpty() || !scriptFiles.isEmpty();
         final String hexColor = json.has("color") && !json.get("color").isJsonNull() ? json.get("color").getAsString() : null;
         final String fonts = json.has("fonts") && !json.get("fonts").isJsonNull() ? json.get("fonts").getAsString() : null;
         final String scriptLang = json.has("scriptLang") && !json.get("scriptLang").isJsonNull() ? json.get("scriptLang").getAsString() : DEFAULT_SCRIPT_LANGUAGE;
@@ -165,8 +167,8 @@ public class PIDSPreset {
                 Collections.unmodifiableList(blacklist),
                 background,
                 thumbnail,
-                getBoolean(json, "showWeather", true),
-                getBoolean(json, "showClock", true),
+                getBoolean(json, "showWeather", true) && !scripted,
+                getBoolean(json, "showClock", true) && !scripted,
                 getBoolean(json, "customTextPushArrival", false),
                 hideRowArray,
                 hexColor == null ? null : Integer.parseInt(hexColor, 16),

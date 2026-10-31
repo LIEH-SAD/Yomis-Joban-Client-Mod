@@ -14,7 +14,6 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.level.block.entity.BlockEntity;
 
 import java.util.function.Consumer;
 
@@ -38,11 +37,19 @@ public class PIDSPresetScreen extends TitledScreen implements GuiHelper {
 	private static String getPIDSType(BlockPos pos) {
 		if (Minecraft.getInstance().level == null) return "";
 
-		final BlockEntity blockEntity = Minecraft.getInstance().level.getBlockEntity(pos);
+		final net.minecraft.world.level.block.Block block = Minecraft.getInstance().level.getBlockState(pos).getBlock();
 
-		if (blockEntity instanceof PIDSRVBase.TileEntityBlockRVPIDS) {
+		if (block instanceof com.jsblock.block.PIDSRVSIL1) {
+			return "rv_pids_sil_1";
+		} else if (block instanceof com.jsblock.block.PIDSRVSIL2) {
+			return "rv_pids_sil_2";
+		} else if (block instanceof PIDSRVBase) {
 			return "rv_pids";
-		} else if (blockEntity instanceof JobanPIDSBase.TileEntityBlockJobanPIDS) {
+		} else if (block instanceof com.jsblock.block.PIDSLCD) {
+			return "lcd_pids";
+		} else if (block instanceof com.jsblock.block.PIDS1A) {
+			return "pids_1a";
+		} else if (block instanceof JobanPIDSBase) {
 			return "pids";
 		}
 

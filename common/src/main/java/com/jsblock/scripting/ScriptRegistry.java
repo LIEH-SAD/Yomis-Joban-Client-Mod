@@ -2,6 +2,7 @@ package com.jsblock.scripting;
 
 import com.jsblock.client.ClientConfig;
 import com.jsblock.scripting.api.ClassRule;
+import com.jsblock.scripting.api.Matrices;
 import com.jsblock.scripting.api.MTRClassShutter;
 import com.jsblock.scripting.core.ScriptManager;
 import com.jsblock.scripting.pids.RectangleWrapper;
@@ -36,6 +37,7 @@ public class ScriptRegistry {
                 script.exposeClass("Text", TextWrapper.class);
                 script.exposeClass("Texture", TextureWrapper.class);
                 script.exposeClass("Rect", RectangleWrapper.class);
+                script.exposeClass("Matrices", Matrices.class);
             }
         });
     }

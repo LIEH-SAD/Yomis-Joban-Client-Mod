@@ -44,6 +44,27 @@ public class RectangleWrapper extends PIDSDrawCall<RectangleWrapper> {
         return this;
     }
 
+    /**
+     * Select the render layer. Only {@code EXTERIOR} layers take the world light level;
+     * the others are drawn fully lit.
+     */
+    public RectangleWrapper renderType(String renderType) {
+        this.naturalLight = naturalLight || (renderType != null && renderType.toUpperCase(java.util.Locale.ROOT).startsWith("EXTERIOR"));
+        return this;
+    }
+
+    @Override
+    public RectangleWrapper zOrder(int order) {
+        super.zOrder(order);
+        return this;
+    }
+
+    @Override
+    public RectangleWrapper matrices(com.jsblock.scripting.api.Matrices matrices) {
+        super.matrices(matrices);
+        return this;
+    }
+
     @Override
     public void render(PoseStack matrices, MultiBufferSource vertexConsumers, MultiBufferSource.BufferSource immediate, Font font, Direction facing, int light) {
         final VertexConsumer vertexConsumer = vertexConsumers.getBuffer(MoreRenderLayers.getLight(WHITE_TEXTURE, false));

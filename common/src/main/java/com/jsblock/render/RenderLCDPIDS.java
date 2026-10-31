@@ -44,6 +44,10 @@ public class RenderLCDPIDS<T extends BlockEntityMapper> extends RenderPIDSBase<T
 
     private static final float BACKGROUND_WIDTH = 111F;
     private static final float BACKGROUND_HEIGHT = 60F;
+    /* JCM 2.3's LCD PIDS script canvas, as reported by pids.width / pids.height */
+    private static final float SCRIPT_CANVAS_WIDTH = 133F;
+    private static final float SCRIPT_CANVAS_HEIGHT = 72F;
+    private static final String PIDS_TYPE = "lcd_pids";
     private final float scale;
     private final float totalScaledWidth;
     private final float destinationStart;
@@ -120,18 +124,26 @@ public class RenderLCDPIDS<T extends BlockEntityMapper> extends RenderPIDSBase<T
                 matrices.popPose();
             }
 
-            matrices.popPose();
-
             /* Script presets draw their whole content themselves (JCM 2.3's ScriptPIDSPreset) */
             if (pidsPreset.hasScript()) {
+                /* The script canvas is mapped onto the background rectangle, so that a script written
+                   for the JCM 2.3 canvas size lines up with the screen texture. */
+                final float scriptWidth = pidsPreset.scriptWidth == null ? SCRIPT_CANVAS_WIDTH : pidsPreset.scriptWidth;
+                final float scriptHeight = pidsPreset.scriptHeight == null ? SCRIPT_CANVAS_HEIGHT : pidsPreset.scriptHeight;
+                final float scriptScaleX = BACKGROUND_WIDTH / scriptWidth;
+                final float scriptScaleY = BACKGROUND_HEIGHT / scriptHeight;
+
                 matrices.pushPose();
                 matrices.translate(startX - 21F / 2, -1.5F - 1F, 0.02);
-                PIDSScriptRenderer.render(matrices, vertexConsumers, immediate, textRenderer, facing, light, entity, pidsPreset, customMessages, hideArrivals, filteredPlatformIds,
-                        pidsPreset.scriptWidth == null ? BACKGROUND_WIDTH : pidsPreset.scriptWidth,
-                        pidsPreset.scriptHeight == null ? BACKGROUND_HEIGHT : pidsPreset.scriptHeight);
+                matrices.scale(scriptScaleX, scriptScaleY, 1);
+                PIDSScriptRenderer.render(matrices, vertexConsumers, immediate, textRenderer, facing, light, entity, pidsPreset, PIDS_TYPE, customMessages, hideArrivals, filteredPlatformIds,
+                        scriptWidth, scriptHeight, !showPlatforms, scale);
+                matrices.popPose();
                 matrices.popPose();
                 return;
             }
+
+            matrices.popPose();
 
             if (!filteredPlatformIds.isEmpty()) {
                 for(long platformId : filteredPlatformIds) {

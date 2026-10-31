@@ -31,6 +31,10 @@ public class TextWrapper extends PIDSDrawCall<TextWrapper> {
     private double marqueeProgressOverride = -1;
     private IGui.HorizontalAlignment alignment = IGui.HorizontalAlignment.LEFT;
     private String font = "mtr:mtr";
+    private String renderType = "LIGHT";
+    private boolean bold = false;
+    private boolean italic = false;
+    private float lineHeightFactor = 1;
 
     public TextWrapper() {
         this.width = 100;
@@ -152,6 +156,46 @@ public class TextWrapper extends PIDSDrawCall<TextWrapper> {
         return this;
     }
 
+    /** Draw bold text. */
+    public TextWrapper bold() {
+        this.bold = true;
+        return this;
+    }
+
+    /** Draw italic text. */
+    public TextWrapper italic() {
+        this.italic = true;
+        return this;
+    }
+
+    /** @param lineHeight the line height multiplier, {@code 1} being the default */
+    public TextWrapper lineHeight(double lineHeight) {
+        this.lineHeightFactor = lineHeight <= 0 ? 1 : (float) lineHeight;
+        return this;
+    }
+
+    /**
+     * Select the render layer, as in JCM 2.3 ({@code EXTERIOR}, {@code EXTERIOR_TRANSLUCENT},
+     * {@code INTERIOR}, {@code INTERIOR_TRANSLUCENT}, {@code LIGHT} or {@code LIGHT_TRANSLUCENT}).
+     * Only {@code EXTERIOR} layers take the world light level; the others are drawn fully lit.
+     */
+    public TextWrapper renderType(String renderType) {
+        this.renderType = renderType == null ? "LIGHT" : renderType.toUpperCase(java.util.Locale.ROOT);
+        return this;
+    }
+
+    @Override
+    public TextWrapper zOrder(int order) {
+        super.zOrder(order);
+        return this;
+    }
+
+    @Override
+    public TextWrapper matrices(com.jsblock.scripting.api.Matrices matrices) {
+        super.matrices(matrices);
+        return this;
+    }
+
     /** @return the width of the text in pixels, as measured with the currently selected font */
     public int measureWidth() {
         return measureWidth(Minecraft.getInstance().font, text);
@@ -164,16 +208,24 @@ public class TextWrapper extends PIDSDrawCall<TextWrapper> {
 
     @Override
     public void render(PoseStack matrices, MultiBufferSource vertexConsumers, MultiBufferSource.BufferSource immediate, Font fontRenderer, Direction facing, int light) {
-        final int renderLight = resolveLight(naturalLight, light);
+        final int renderLight = resolveTextLight(light);
         final String renderText = wrapText ? wrapToWidth(fontRenderer, text) : text;
 
         if (marquee && measureWidth(fontRenderer, renderText) > width / scale) {
             renderMarquee(matrices, immediate, fontRenderer, renderText, renderLight);
+        } else if (bold || italic || lineHeightFactor != 1) {
+            IDrawingJoban.drawStringWithFontStyled(matrices, fontRenderer, immediate, renderText, alignment, IGui.VerticalAlignment.TOP, alignment, x, y, width, height, scale, keepRatio, color, shadowed, renderLight, font, false, null, bold, italic, lineHeightFactor);
         } else {
             IDrawingJoban.drawStringWithFont(matrices, fontRenderer, immediate, renderText, alignment, IGui.VerticalAlignment.TOP, x, y, width, height, scale, keepRatio, color, shadowed, renderLight, font);
         }
 
         immediate.endBatch();
+    }
+
+    /** {@code EXTERIOR} layers take the world light, everything else is drawn fully lit. */
+    private int resolveTextLight(int light) {
+        final boolean exterior = naturalLight || renderType.startsWith("EXTERIOR");
+        return exterior ? light : IGui.MAX_LIGHT_GLOWING;
     }
 
     private void renderMarquee(PoseStack matrices, MultiBufferSource.BufferSource immediate, Font fontRenderer, String str, int light) {
@@ -235,7 +287,8 @@ public class TextWrapper extends PIDSDrawCall<TextWrapper> {
     }
 
     private Style fontStyle() {
-        return Config.useMTRFont() ? Style.EMPTY.withFont(new ResourceLocation(font)) : Style.EMPTY;
+        final Style style = Config.useMTRFont() ? Style.EMPTY.withFont(new ResourceLocation(font)) : Style.EMPTY;
+        return style.withBold(bold).withItalic(italic);
     }
 
     private static int charWidth(Font fontRenderer, Style style, String str) {

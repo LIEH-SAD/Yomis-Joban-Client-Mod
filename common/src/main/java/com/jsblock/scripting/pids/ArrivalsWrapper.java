@@ -86,6 +86,26 @@ public class ArrivalsWrapper {
         return ids;
     }
 
+    /** The platforms this PIDS serves, with their name and colour. */
+    public List<PlatformWrapper> platforms() {
+        final List<PlatformWrapper> platforms = new ArrayList<>();
+        for (final ArrivalWrapper arrival : arrivals) {
+            final long platformId = arrival.platformId();
+            boolean seen = false;
+            for (final PlatformWrapper platform : platforms) {
+                if (platform.id() == platformId) {
+                    seen = true;
+                    break;
+                }
+            }
+            if (!seen) {
+                final PlatformWrapper platform = PlatformWrapper.of(platformId);
+                if (platform != null) platforms.add(platform);
+            }
+        }
+        return platforms;
+    }
+
     @Override
     public String toString() {
         return "Arrivals[" + arrivals.size() + "]";

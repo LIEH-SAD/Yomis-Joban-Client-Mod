@@ -45,6 +45,9 @@ public class RenderRVPIDS<T extends BlockEntityMapper> extends RenderPIDSBase<T>
     private static final float BACKGROUND_WIDTH = 119F;
     private static final float BACKGROUND_HEIGHT = 65.8F;
     private static final float BACKGROUND_Y = -9.5F;
+    /* JCM 2.3's RV PIDS script canvas, as reported by pids.width / pids.height */
+    private static final float SCRIPT_CANVAS_WIDTH = 136F;
+    private static final float SCRIPT_CANVAS_HEIGHT = 76F;
     private static final double OVERLAY_DISTANCE = 0.1;
     private final float scale;
     private final float totalScaledWidth;
@@ -60,10 +63,15 @@ public class RenderRVPIDS<T extends BlockEntityMapper> extends RenderPIDSBase<T>
     private final boolean rotate90;
     private final int defaultTextColor;
     private final float rotation;
+    private final String pidsType;
     private final static String defaultFont = "mtr:mtr";
     private final PIDSPreset DEFAULT_PRESET = new PIDSPreset(new ResourceLocation(Joban.MOD_ID, "textures/block/pids_rv_screen.png"), true, true, false, SHOW_ALL_ROWS, 0, null, null);
 
     public RenderRVPIDS(BlockEntityRenderDispatcher dispatcher, int maxArrivals, float startX, float startY, float startZ, float maxHeight, float maxWidth, boolean rotate90, boolean renderArrivalNumber, int textColor, float rotation) {
+        this(dispatcher, maxArrivals, startX, startY, startZ, maxHeight, maxWidth, rotate90, renderArrivalNumber, textColor, rotation, "rv_pids");
+    }
+
+    public RenderRVPIDS(BlockEntityRenderDispatcher dispatcher, int maxArrivals, float startX, float startY, float startZ, float maxHeight, float maxWidth, boolean rotate90, boolean renderArrivalNumber, int textColor, float rotation, String pidsType) {
         super(dispatcher, maxArrivals);
         scale = 230 * maxArrivals / maxHeight;
         totalScaledWidth = scale * maxWidth / 16;
@@ -79,6 +87,7 @@ public class RenderRVPIDS<T extends BlockEntityMapper> extends RenderPIDSBase<T>
         this.rotate90 = rotate90;
         this.defaultTextColor = textColor;
         this.rotation = rotation;
+        this.pidsType = pidsType;
     }
 
     @Override
@@ -151,6 +160,26 @@ public class RenderRVPIDS<T extends BlockEntityMapper> extends RenderPIDSBase<T>
                 return;
             }
 
+            /* Script presets draw their whole content themselves (JCM 2.3's ScriptPIDSPreset),
+               so neither the clock nor the weather icon is rendered for them. */
+            if (pidsPreset.hasScript()) {
+                final float scriptWidth = pidsPreset.scriptWidth == null ? SCRIPT_CANVAS_WIDTH : pidsPreset.scriptWidth;
+                final float scriptHeight = pidsPreset.scriptHeight == null ? SCRIPT_CANVAS_HEIGHT : pidsPreset.scriptHeight;
+                final float scriptScaleX = BACKGROUND_WIDTH / scriptWidth;
+                final float scriptScaleY = BACKGROUND_HEIGHT / scriptHeight;
+
+                matrices.pushPose();
+                /* The background is drawn with BACKGROUND_Y already applied to this matrix stack,
+                   so the script canvas only adds the texture's own -1.5 offset. */
+                matrices.translate(startX - 26F / 2, -1.5F, 0.02);
+                matrices.scale(scriptScaleX, scriptScaleY, 1);
+                PIDSScriptRenderer.render(matrices, vertexConsumers, immediate, textRenderer, facing, light, entity, pidsPreset, pidsType, customMessages, hideArrivals, filteredPlatformIds,
+                        scriptWidth, scriptHeight, hidePlatforms, scale);
+                matrices.popPose();
+                matrices.popPose();
+                return;
+            }
+
             /* Render Clock */
             if(pidsPreset.showClock) {
                 renderClock(matrices, textRenderer, immediate, world, textFont);
@@ -159,18 +188,6 @@ public class RenderRVPIDS<T extends BlockEntityMapper> extends RenderPIDSBase<T>
             /* Render Weather icon */
             if(pidsPreset.showWeather) {
                 renderWeather(matrices, vertexConsumers, world, facing);
-            }
-
-            /* Script presets draw their whole content themselves (JCM 2.3's ScriptPIDSPreset) */
-            if (pidsPreset.hasScript()) {
-                matrices.pushPose();
-                matrices.translate(startX - 26F / 2, -1.5F, 0.01);
-                PIDSScriptRenderer.render(matrices, vertexConsumers, immediate, textRenderer, facing, light, entity, pidsPreset, customMessages, hideArrivals, filteredPlatformIds,
-                        pidsPreset.scriptWidth == null ? BACKGROUND_WIDTH : pidsPreset.scriptWidth,
-                        pidsPreset.scriptHeight == null ? BACKGROUND_HEIGHT : pidsPreset.scriptHeight);
-                matrices.popPose();
-                matrices.popPose();
-                return;
             }
 
             matrices.popPose();

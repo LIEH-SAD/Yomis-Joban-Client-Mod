@@ -1,5 +1,6 @@
 package com.jsblock.scripting.pids;
 
+import com.jsblock.scripting.api.Matrices;
 import com.mojang.blaze3d.vertex.PoseStack;
 import mtr.data.IGui;
 import net.minecraft.client.gui.Font;
@@ -16,6 +17,11 @@ public abstract class PIDSDrawCall<T extends PIDSDrawCall<T>> {
     protected float y = 0;
     protected float width = 20;
     protected float height = 20;
+    /** Explicit z-order, or {@code -1} when the draw call relies on the automatic ordering. */
+    protected int zOrder = -1;
+    /** Automatic z-order slot assigned by {@link PIDSScriptContext#draw(Object)}, or {@code -1}. */
+    protected int autoZOrder = -1;
+    protected Matrices matrices = null;
 
     @SuppressWarnings("unchecked")
     public T pos(float x, float y) {
@@ -41,6 +47,48 @@ public abstract class PIDSDrawCall<T extends PIDSDrawCall<T>> {
             ((PIDSScriptContext) ctx).draw(this);
         }
         return (T) this;
+    }
+
+    /**
+     * Draw this call at a fixed z-order. Calls without an explicit z-order are ordered by the
+     * sequence in which they are queued, which resolves z-fighting between overlapping draw calls.
+     * @param order the z-order, which must be 0 or above
+     */
+    @SuppressWarnings("unchecked")
+    public T zOrder(int order) {
+        if (order < 0) {
+            throw new IllegalArgumentException("Z-Order must be 0 or above.");
+        }
+        this.zOrder = order;
+        return (T) this;
+    }
+
+    /** Apply a transformation on top of the PIDS canvas before this call is drawn. */
+    @SuppressWarnings("unchecked")
+    public T matrices(Matrices matrices) {
+        this.matrices = matrices;
+        return (T) this;
+    }
+
+    public int getZOrder() {
+        if (zOrder >= 0) return zOrder;
+        return Math.max(autoZOrder, 0);
+    }
+
+    public boolean hasExplicitZOrder() {
+        return zOrder >= 0;
+    }
+
+    public boolean hasAutoZOrder() {
+        return autoZOrder >= 0;
+    }
+
+    public void setAutoZOrder(int order) {
+        this.autoZOrder = order;
+    }
+
+    public Matrices getMatrices() {
+        return matrices;
     }
 
     public float getX() {

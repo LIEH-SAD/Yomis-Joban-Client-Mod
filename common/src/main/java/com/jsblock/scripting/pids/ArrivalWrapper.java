@@ -5,6 +5,9 @@ import mtr.data.Platform;
 import mtr.data.Route;
 import mtr.data.ScheduleEntry;
 
+import java.util.Collections;
+import java.util.List;
+
 /**
  * One train arrival exposed to PIDS scripts.
  * Adapted to the MTR 3.x data model: MTR 3.x only provides {@code arrivalMillis},
@@ -97,6 +100,34 @@ public class ArrivalWrapper {
 
     public int carCount() {
         return scheduleEntry.trainCars;
+    }
+
+    /**
+     * The scheduled departure time of this arrival, in milliseconds since the epoch.
+     * MTR 3.x only exposes the arrival time, which is reported here as well.
+     */
+    public long departureTime() {
+        return arrivalTime();
+    }
+
+    /** MTR 3.x does not expose a departure index; always -1. */
+    public int departureIndex() {
+        return -1;
+    }
+
+    /** The route of this arrival. */
+    public RouteWrapper route() {
+        return RouteWrapper.of(route);
+    }
+
+    /** The individual cars of this arrival; MTR 3.x does not expose them, so the list is empty. */
+    public List<Object> cars() {
+        return Collections.emptyList();
+    }
+
+    /** The platform this arrival serves. */
+    public PlatformWrapper platform() {
+        return PlatformWrapper.of(platformId);
     }
 
     @Override

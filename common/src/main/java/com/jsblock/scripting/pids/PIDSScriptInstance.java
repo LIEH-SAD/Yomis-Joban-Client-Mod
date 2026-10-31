@@ -46,6 +46,6 @@ public class PIDSScriptInstance extends ScriptInstance<PIDSWrapper> {
 
     @Override
     public boolean shouldInvalidate() {
-        return blockEntity.isRemoved() || blockEntity.getLevel() == null;
+        return blockEntity == null || blockEntity.isRemoved() || blockEntity.getLevel() == null;
     }
 }
