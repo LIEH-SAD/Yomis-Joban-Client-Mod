@@ -1,8 +1,12 @@
 configurations {
-	// Resolved by the :rhino project to build its relocated copy of the engine.
-	// Declared here because only Loom projects can resolve Maven dependencies
-	// offline in this build.
+	// Resolved by the :rhino project, which compiles the engine from these two
+	// artifacts under its private package. Declared here because only Loom
+	// projects can resolve Maven dependencies offline in this build.
 	rhinoEngine {
+		canBeConsumed = false
+		canBeResolved = true
+	}
+	rhinoSources {
 		canBeConsumed = false
 		canBeResolved = true
 	}
@@ -16,6 +20,7 @@ dependencies {
 	// mods that bundle their own Rhino copy cannot shadow it at runtime.
 	implementation project(":rhino")
 	rhinoEngine "org.mozilla:rhino:${rootProject.rhino_version}"
+	rhinoSources "org.mozilla:rhino:${rootProject.rhino_version}:sources"
 }
 
 architectury {

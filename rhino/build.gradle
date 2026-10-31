@@ -1,100 +1,83 @@
-// Repackages the Rhino engine into a private package.
+// Compiles the Rhino engine inside a private package.
 //
 // Minecraft mods all live on a single class loader, so an unrelocated
 // `org.mozilla.javascript` clashes with any other mod that ships its own Rhino
 // copy (WorldEdit does, for example). Whichever copy is loaded first wins for
 // both mods, and an older copy silently loses features - e.g. template
-// literals stop being interpolated. Relocating the engine here guarantees the
-// scripting layer always talks to the Rhino it was built against.
-
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-import org.objectweb.asm.ClassReader
-import org.objectweb.asm.ClassVisitor
-import org.objectweb.asm.ClassWriter
-import org.objectweb.asm.FieldVisitor
-import org.objectweb.asm.MethodVisitor
-import org.objectweb.asm.Opcodes
+// literals stop being interpolated. Building the engine from relocated sources
+// guarantees the scripting layer always talks to the Rhino it was built against.
+//
+// The relocation happens on the source text instead of on the compiled jar:
+// that keeps every relocated class as ordinary source code, so the IDE can
+// navigate into the engine, and Rhino's own string literals - the bytecode
+// generator embeds type signatures such as "(Lorg/mozilla/javascript/Context;)V" -
+// are relocated by the same replacement.
 
 plugins {
 	id "java"
-	id "com.github.johnrengelman.shadow"
+	id "idea"
 }
 
 def relocatedPackage = "com.jsblock.lib.org.mozilla"
 
-// The engine jar is resolved through :common, whose Loom-provided repositories
-// are the ones able to serve it from the shared Gradle cache (offline builds).
+// The engine is resolved through :common, whose Loom-provided repositories are
+// the ones able to serve it from the shared Gradle cache (offline builds).
 def rhinoEngineFiles = project(":common").configurations.rhinoEngine
+def rhinoSourcesFiles = project(":common").configurations.rhinoSources
 
-// Rhino's bytecode generator (Codegen/BodyCodegen) and JavaAdapter build internal
-// type signatures from string literals such as "(Lorg/mozilla/javascript/Context;)V".
-// Shadow only rewrites strings that are exact class names, so those signatures keep
-// pointing at the original package and every class generated at runtime fails
-// verification against the relocated Context/Scriptable. Rewrite them as well.
-def relocateSignature = { String value ->
-	value
-			.replaceAll(/(?<!lib\/)org\/mozilla\/javascript/, "com/jsblock/lib/org/mozilla/javascript")
-			.replaceAll(/(?<!lib\.)org\.mozilla\.javascript/, "com.jsblock.lib.org.mozilla.javascript")
-}
+def relocateRhinoSources = tasks.register("relocateRhinoSources", Sync) {
+	description = "Rewrites the Rhino sources into ${relocatedPackage}"
+	group = "build"
 
-def relocateClassStrings = { byte[] bytes ->
-	final ClassReader reader = new ClassReader(bytes)
-	final ClassWriter writer = new ClassWriter(0)
-	final ClassVisitor visitor = new ClassVisitor(Opcodes.ASM9, writer) {
-		@Override
-		FieldVisitor visitField(int access, String name, String descriptor, String signature, Object value) {
-			super.visitField(access, name, descriptor, signature, value instanceof String ? relocateSignature((String) value) : value)
-		}
+	// Everything the engine needs at runtime that is not bytecode - the message
+	// bundles behind Rhino's error messages, plus the license notices - only
+	// exists in the released binary jar.
+	from({ zipTree(rhinoEngineFiles.singleFile) }) {
+		exclude "**/*.class"
+	}
+	// The sources jar ships nothing but Java files, so it contributes those only.
+	from({ zipTree(rhinoSourcesFiles.singleFile) }) {
+		include "**/*.java"
+	}
 
-		@Override
-		MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
-			final MethodVisitor delegate = super.visitMethod(access, name, descriptor, signature, exceptions)
-			if (delegate == null) return null
-			return new MethodVisitor(Opcodes.ASM9, delegate) {
-				@Override
-				void visitLdcInsn(Object value) {
-					super.visitLdcInsn(value instanceof String ? relocateSignature((String) value) : value)
-				}
-			}
+	into(layout.buildDirectory.dir("relocated-sources"))
+
+	includeEmptyDirs = false
+	exclude "META-INF/MANIFEST.MF", "META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA"
+	eachFile { details ->
+		if (details.path.startsWith("org/mozilla/")) {
+			details.path = "com/jsblock/lib/" + details.path
 		}
 	}
-	reader.accept(visitor, 0)
-	return writer.toByteArray()
-}
-
-tasks.register("relocatedRhino", ShadowJar) {
-	description = "Relocates the Rhino engine into ${relocatedPackage}"
-	archiveClassifier.set("relocated")
-	destinationDirectory.set(layout.buildDirectory.dir("relocated"))
-
-	from(rhinoEngineFiles)
-	relocate "org.mozilla", relocatedPackage
-	// Signature files of the original jar would no longer match
-	exclude "META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA", "META-INF/MANIFEST.MF"
 
 	doLast {
-		final File jar = archiveFile.get().asFile
-		final File rewritten = new File(jar.parentFile, jar.name + ".rewriting")
-		new java.util.zip.ZipFile(jar).withCloseable { input ->
-			new java.util.zip.ZipOutputStream(new FileOutputStream(rewritten)).withCloseable { output ->
-				input.entries().each { entry ->
-					byte[] data = input.getInputStream(entry).bytes
-					if (!entry.directory && entry.name.endsWith(".class")) {
-						data = relocateClassStrings(data)
-					}
-					output.putNextEntry(new java.util.zip.ZipEntry(entry.name))
-					output.write(data)
-					output.closeEntry()
-				}
+		fileTree(destinationDir) {
+			include "**/*.java"
+		}.each { File source ->
+			// Byte level, so the replacement cannot damage any non-ASCII comment
+			// or string literal of the original file.
+			def text = new String(source.bytes, "ISO-8859-1")
+			def relocated = text.replace("org.mozilla", relocatedPackage)
+			if (relocated != text) {
+				source.bytes = relocated.getBytes("ISO-8859-1")
 			}
 		}
-		java.nio.file.Files.move(rewritten.toPath(), jar.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
 	}
 }
 
-// Consumers (common, fabric, forge) must receive the relocated jar instead of
-// this project's own empty one.
-artifacts {
-	add("apiElements", tasks.named("relocatedRhino"))
-	add("runtimeElements", tasks.named("relocatedRhino"))
+sourceSets {
+	main {
+		java.srcDir(relocateRhinoSources)
+		resources {
+			srcDir(relocateRhinoSources)
+			exclude "**/*.java"
+		}
+	}
+}
+
+// The vendored engine is plain Java and must not run through the Manifold
+// preprocessor that every Minecraft-facing project of this build is compiled
+// with (its javac plugin is not on this project's classpath).
+tasks.withType(JavaCompile).configureEach {
+	options.compilerArgs = []
 }
