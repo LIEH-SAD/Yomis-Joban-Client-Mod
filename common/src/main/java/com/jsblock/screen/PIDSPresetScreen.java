@@ -132,7 +132,7 @@ public class PIDSPresetScreen extends TitledScreen implements GuiHelper {
 			GuiHelper.drawTexture(guiGraphics, preset.getThumbnail(), startX + 0.5, startY + offset + 0.5, width - 1, height - offset - 4);
 		}
 
-		if (!backgroundOnly) {
+		if (!backgroundOnly && !preset.isScriptPreset()) {
 			final double perRow = height / 8.5;
 			final double rowHeight = Math.max(0.5, height / 24.0);
 

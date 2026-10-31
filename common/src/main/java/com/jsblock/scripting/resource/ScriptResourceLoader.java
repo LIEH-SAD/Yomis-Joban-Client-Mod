@@ -12,6 +12,7 @@ import com.jsblock.scripting.primitive.ScriptContent;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
+import net.minecraft.server.packs.resources.ResourceManager;
 
 import java.io.File;
 import java.io.IOException;
@@ -74,11 +75,11 @@ public class ScriptResourceLoader {
 
     private Map<ResourceLocation, String> readFromResourcePacks() {
         final Map<ResourceLocation, String> result = new LinkedHashMap<>();
-        final Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft == null) return result;
+        final ResourceManager resourceManager = Scripting.getResourceManager();
+        if (resourceManager == null) return result;
 
         try {
-            final Map<ResourceLocation, Resource> resources = minecraft.getResourceManager()
+            final Map<ResourceLocation, Resource> resources = resourceManager
                     .listResources(SCRIPT_DIRECTORY, loc -> loc.getPath().endsWith(".js"));
             for (final Map.Entry<ResourceLocation, Resource> entry : resources.entrySet()) {
                 try {

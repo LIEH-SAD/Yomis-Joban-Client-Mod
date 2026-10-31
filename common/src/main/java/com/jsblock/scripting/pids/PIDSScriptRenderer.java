@@ -23,25 +23,32 @@ public final class PIDSScriptRenderer {
     }
 
     public static void render(PoseStack matrices, MultiBufferSource vertexConsumers, MultiBufferSource.BufferSource immediate, Font font, Direction facing, int light, BlockEntityMapper entity, PIDSPreset preset, String[] customMessages, boolean[] hiddenRows, List<Long> targetPlatformIds, float canvasWidth, float canvasHeight) {
-        if (ClientConfig.getSkipScriptParsing() || !Scripting.isInitialized()) return;
+        if (ClientConfig.getSkipScriptParsing() || !Scripting.isInitialized() || preset == null) return;
 
         final ParsedScript parsedScript = Scripting.resolvePidsScript(preset);
         if (parsedScript == null) return;
 
         final PIDSWrapper wrapper = new PIDSWrapper(entity, customMessages, hiddenRows, targetPlatformIds, canvasWidth, canvasHeight);
-        final String presetKey = preset.script;
 
-        final PIDSScriptInstance instance = Scripting.getInstanceManager().computeIfAbsent(entity,
-                () -> new PIDSScriptInstance(parsedScript, new PIDSScriptContext(), wrapper, entity, presetKey));
+        /* One instance per block entity, rebuilt whenever the block switches to another preset */
+        PIDSScriptInstance instance = Scripting.getInstanceManager().get(entity) instanceof PIDSScriptInstance ? (PIDSScriptInstance) Scripting.getInstanceManager().get(entity) : null;
+
+        if (instance == null || instance.getPreset() != preset || instance.getScript() != parsedScript) {
+            Scripting.getInstanceManager().remove(entity);
+            instance = Scripting.getInstanceManager().computeIfAbsent(entity,
+                    () -> new PIDSScriptInstance(parsedScript, new PIDSScriptContext(), wrapper, entity, preset));
+        }
+
         instance.setWrapperObject(wrapper);
 
-        parsedScript.invokeRenderFunctions(instance, () -> {
-            if (instance.getContextObject() instanceof PIDSScriptContext) {
-                instance.saveRenderCalls(((PIDSScriptContext) instance.getContextObject()).getDrawCalls());
+        final PIDSScriptInstance finalInstance = instance;
+        parsedScript.invokeRenderFunctions(finalInstance, () -> {
+            if (finalInstance.getContextObject() instanceof PIDSScriptContext) {
+                finalInstance.saveRenderCalls(((PIDSScriptContext) finalInstance.getContextObject()).getDrawCalls());
             }
         });
 
-        final List<PIDSDrawCall<?>> renderCalls = instance.getRenderCalls();
+        final List<PIDSDrawCall<?>> renderCalls = finalInstance.getRenderCalls();
         for (int i = 0; i < renderCalls.size(); i++) {
             renderCalls.get(i).render(matrices, vertexConsumers, immediate, font, facing, light);
         }

@@ -1,5 +1,6 @@
 package com.jsblock.client;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.jsblock.Joban;
@@ -15,35 +16,35 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 /**
- * Class responsible for handling custom resources stuff.
+ * Class responsible for handling custom resources stuff.<br>
+ * Presets are declared in {@code assets/jsblock/joban_custom_resources.json} (shipped by the mod and
+ * overridable/extendable by resource packs), mirroring JCM 2.3's {@code PIDSManager}.
  * @author LX86
  * @since 1.1.4
  */
 public class JobanCustomResources {
-    private final static PIDSPreset defaultPreset1 = new PIDSPreset(new ResourceLocation(Joban.MOD_ID, "textures/pids_screen/door_cls_apg.png"), true, true, false, new boolean[]{true, true, true, false},null, null, null);
-    private final static PIDSPreset defaultPreset2 = new PIDSPreset(new ResourceLocation(Joban.MOD_ID, "textures/pids_screen/door_cls_psd.png"), true, true, false, new boolean[]{true, true, true, false},null, null, null);
-    private final static PIDSPreset defaultPreset3 = new PIDSPreset(new ResourceLocation(Joban.MOD_ID, "textures/pids_screen/door_cls_train.png"), true, true, false, new boolean[]{true, true, true, false},null, null, null);
     public static final String CUSTOM_RESOURCES_ID = "joban_custom_resources";
     public static final String customResourcePath = Joban.MOD_ID + ":" + CUSTOM_RESOURCES_ID + ".json";
-    /** Presets shipped with the mod, in display order. */
-    public static final List<String> BUILTIN_PRESET_IDS = Collections.unmodifiableList(Arrays.asList("door_cls_apg", "door_cls_psd", "door_cls_train"));
-    public static HashMap<String, PIDSPreset> PIDSPresets = new HashMap<>();
+    /** Every loaded preset, in declaration order (built-in presets of the mod come first). */
+    public static volatile Map<String, PIDSPreset> PIDSPresets = Collections.emptyMap();
 
     /**
-     * @return the built-in presets, in display order
+     * @return the built-in presets, in declaration order
      */
     public static List<PIDSPresetEntry> getBuiltInPresets() {
         final List<PIDSPresetEntry> presets = new ArrayList<>();
 
-        for (String id : BUILTIN_PRESET_IDS) {
-            final PIDSPreset preset = PIDSPresets.get(id);
-
-            if (preset != null) {
-                presets.add(new PIDSPresetEntry(id, preset, true));
+        for (Map.Entry<String, PIDSPreset> entry : PIDSPresets.entrySet()) {
+            if (entry.getValue().builtin) {
+                presets.add(new PIDSPresetEntry(entry.getKey(), entry.getValue()));
             }
         }
 
@@ -57,16 +58,16 @@ public class JobanCustomResources {
         final List<PIDSPresetEntry> presets = new ArrayList<>();
         final List<String> ids = new ArrayList<>();
 
-        for (String id : PIDSPresets.keySet()) {
-            if (!BUILTIN_PRESET_IDS.contains(id)) {
-                ids.add(id);
+        for (Map.Entry<String, PIDSPreset> entry : PIDSPresets.entrySet()) {
+            if (!entry.getValue().builtin) {
+                ids.add(entry.getKey());
             }
         }
 
         Collections.sort(ids);
 
         for (String id : ids) {
-            presets.add(new PIDSPresetEntry(id, PIDSPresets.get(id), false));
+            presets.add(new PIDSPresetEntry(id, PIDSPresets.get(id)));
         }
 
         return presets;
@@ -77,48 +78,61 @@ public class JobanCustomResources {
      */
     public static PIDSPresetEntry getPresetEntry(String id) {
         final PIDSPreset preset = id == null ? null : PIDSPresets.get(id);
-        return preset == null ? null : new PIDSPresetEntry(id, preset, BUILTIN_PRESET_IDS.contains(id));
+        return preset == null ? null : new PIDSPresetEntry(id, preset);
+    }
+
+    /** @return all preset ids, in declaration order */
+    public static List<String> getPresetIds() {
+        return new ArrayList<>(PIDSPresets.keySet());
     }
 
     /**
      * Should be called when resource manager is being reloaded.
      */
     public static void reload(ResourceManager manager) {
-        PIDSPresets.clear();
-        /* Add default preset */
-        PIDSPresets.put("door_cls_apg", defaultPreset1);
-        PIDSPresets.put("door_cls_psd", defaultPreset2);
-        PIDSPresets.put("door_cls_train", defaultPreset3);
+        final Map<String, PIDSPreset> presets = new LinkedHashMap<>();
 
-        /* Read resource */
-        readResource(manager, customResourcePath, jsonConfig -> {
-            try {
-                if(!jsonConfig.has("pids_images") || !jsonConfig.get("pids_images").isJsonArray()) {
-                    Joban.LOGGER.warn("[JCM] Invalid joban_custom_resources.json!");
-                    Joban.LOGGER.warn("[JCM] \"pids_images\" must be an array");
-                    return;
-                }
+        /* Read resource. The mod ships its own copy, resource packs can add to it or override it entirely. */
+        readResource(manager, customResourcePath, jsonConfig -> loadJson(presets, jsonConfig));
 
-                jsonConfig.get("pids_images").getAsJsonArray().forEach(jsonElement -> {
-                    String id = jsonElement.getAsJsonObject().get("id").getAsString();
+        /* Swap the whole map in one go so the render thread never sees a half-populated preset list */
+        PIDSPresets = presets;
 
-                    if(PIDSPresets.containsKey(id)) {
-                        Joban.LOGGER.warn("[Joban Client] PIDS Preset ID: " + id + " already added.");
-                        return;
-                    }
-
-                    PIDSPreset preset = PIDSPreset.fromJson(jsonElement);
-                    PIDSPresets.put(id, preset);
-                });
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        });
-
-        Joban.LOGGER.info("[Joban Client] Loaded PIDS Preset: " + String.join(", ", PIDSPresets.keySet()));
+        Joban.LOGGER.info("[Joban Client] Loaded PIDS Preset: " + String.join(", ", presets.keySet()));
 
         /* Re-parse scripts once the resource packs (and therefore the custom presets) are available */
-        Scripting.reload();
+        Scripting.reload(manager);
+    }
+
+    private static void loadJson(Map<String, PIDSPreset> presets, JsonObject jsonConfig) {
+        if (!jsonConfig.has("pids_images") || !jsonConfig.get("pids_images").isJsonArray()) {
+            Joban.LOGGER.warn("[JCM] Invalid joban_custom_resources.json!");
+            Joban.LOGGER.warn("[JCM] \"pids_images\" must be an array");
+            return;
+        }
+
+        for (JsonElement jsonElement : jsonConfig.get("pids_images").getAsJsonArray()) {
+            if (!jsonElement.isJsonObject() || !jsonElement.getAsJsonObject().has("id")) {
+                Joban.LOGGER.warn("[Joban Client] Skipped a PIDS preset entry without an \"id\".");
+                continue;
+            }
+
+            final JsonObject presetObject = jsonElement.getAsJsonObject();
+            final String id = presetObject.get("id").getAsString();
+
+            try {
+                final PIDSPreset preset = PIDSPreset.fromJson(presetObject, id);
+
+                if (presets.containsKey(id) && !preset.builtin) {
+                    Joban.LOGGER.warn("[Joban Client] PIDS Preset ID: " + id + " already added.");
+                    continue;
+                }
+
+                presets.put(id, preset);
+            } catch (Exception e) {
+                Joban.LOGGER.error("[Joban Client] Failed to load PIDS Preset ID: " + id + " (" + e + ")");
+            }
+        }
     }
 
     private static void readResource(ResourceManager manager, String path, Consumer<JsonObject> callback) {
@@ -127,12 +141,12 @@ public class JobanCustomResources {
                 try (final InputStream stream = Utilities.getInputStream(resource)) {
                     callback.accept(new JsonParser().parse(new InputStreamReader(stream, StandardCharsets.UTF_8)).getAsJsonObject());
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    Joban.LOGGER.error("[Joban Client] Failed to read " + path, e);
                 }
                 try {
                     Utilities.closeResource(resource);
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    Joban.LOGGER.error("[Joban Client] Failed to close " + path, e);
                 }
             });
         } catch (Exception ignored) {

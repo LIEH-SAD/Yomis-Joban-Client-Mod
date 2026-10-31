@@ -137,10 +137,11 @@ public abstract class RenderPIDSBase<T extends BlockEntityMapper> extends BlockE
         }
 
         /* Hide Platform Circles (RV PIDS Only) */
+        final boolean presetHidePlatform = preset != null && preset.hidePlatform;
         if (entity instanceof PIDSRVBase.TileEntityBlockRVPIDS) {
-            hidePlatforms = ((PIDSRVBase.TileEntityBlockRVPIDS) entity).getHidePlatformNumber();
+            hidePlatforms = presetHidePlatform || ((PIDSRVBase.TileEntityBlockRVPIDS) entity).getHidePlatformNumber();
         } else {
-            hidePlatforms = false;
+            hidePlatforms = presetHidePlatform;
         }
 
         try {

@@ -26,14 +26,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-/**
- * Base screen of the PIDS block config screens.<br>
- * The list layout (preset preview, filtered platform, one row per arrival, hide platform number)
- * is a direct port of JCM 2.3's {@code PIDSScreen}. This fork has two PIDS block families with
- * different update packets, so the actual saving is deferred to the subclasses.<br>
- * The auto-switch settings are exclusive to this fork and are appended at the end of the list
- * as their own categories, so the 2.3 layout is left untouched.
- */
+// 基于 AmberUI 和 JCM 2.3 的屏幕移植
 public abstract class PIDSScreen extends BlockConfigListScreen {
 	protected static final int MAX_MESSAGE_LENGTH = 100;
 	protected static final int ROW_HIDDEN_WIDTH = 95;
@@ -148,7 +141,7 @@ public abstract class PIDSScreen extends BlockConfigListScreen {
 		});
 		this.autoSwitchCheckbox.setChecked(autoSwitchEnabled);
 
-		this.autoSwitchPresetTextField = new WidgetSuggestionTextField("None", JobanCustomResources.PIDSPresets.keySet(), MAX_MESSAGE_LENGTH, true);
+		this.autoSwitchPresetTextField = new WidgetSuggestionTextField("None", JobanCustomResources.getPresetIds(), MAX_MESSAGE_LENGTH, true);
 		this.autoSwitchPresetTextField.setResponder(text -> {
 		});
 		this.autoSwitchPresetTextField.setValue(autoSwitchPreset == null ? "" : autoSwitchPreset);
@@ -162,7 +155,7 @@ public abstract class PIDSScreen extends BlockConfigListScreen {
 		});
 		this.depAutoSwitchCheckbox.setChecked(depAutoSwitchEnabled);
 
-		this.depAutoSwitchPresetTextField = new WidgetSuggestionTextField("None", JobanCustomResources.PIDSPresets.keySet(), MAX_MESSAGE_LENGTH, true);
+		this.depAutoSwitchPresetTextField = new WidgetSuggestionTextField("None", JobanCustomResources.getPresetIds(), MAX_MESSAGE_LENGTH, true);
 		this.depAutoSwitchPresetTextField.setResponder(text -> {
 		});
 		this.depAutoSwitchPresetTextField.setValue(depAutoSwitchPreset == null ? "" : depAutoSwitchPreset);

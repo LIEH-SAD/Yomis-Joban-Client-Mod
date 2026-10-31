@@ -139,9 +139,11 @@ public class RenderRVPIDS<T extends BlockEntityMapper> extends RenderPIDSBase<T>
             matrices.scale(1F / scale, 1F / scale, 1F / scale);
 
             /* Render Background */
-            final VertexConsumer vertexConsumerBackground = vertexConsumers.getBuffer(MoreRenderLayers.getLight(pidsPreset.image, false));
-            matrices.translate(0, BACKGROUND_Y, 0.01);
-            drawTexture(matrices, vertexConsumerBackground, startX - 26F / 2, -1.5F, BACKGROUND_WIDTH, BACKGROUND_HEIGHT, facing, ARGB_WHITE, MAX_LIGHT_GLOWING);
+            if (pidsPreset.image != null) {
+                final VertexConsumer vertexConsumerBackground = vertexConsumers.getBuffer(MoreRenderLayers.getLight(pidsPreset.image, false));
+                matrices.translate(0, BACKGROUND_Y, 0.01);
+                drawTexture(matrices, vertexConsumerBackground, startX - 26F / 2, -1.5F, BACKGROUND_WIDTH, BACKGROUND_HEIGHT, facing, ARGB_WHITE, MAX_LIGHT_GLOWING);
+            }
 
             /* If the player is too far away from the PIDS that not even the train renders */
             if (RenderTrains.shouldNotRender(pos, Math.min(MAX_VIEW_DISTANCE, RenderTrains.maxTrainRenderDistance), rotate90 ? null : facing)) {
@@ -159,14 +161,16 @@ public class RenderRVPIDS<T extends BlockEntityMapper> extends RenderPIDSBase<T>
                 renderWeather(matrices, vertexConsumers, world, facing);
             }
 
-            /* Script-drawn content, in the preset background's texel space */
-            if (pidsPreset.script != null && !pidsPreset.script.isEmpty()) {
+            /* Script presets draw their whole content themselves (JCM 2.3's ScriptPIDSPreset) */
+            if (pidsPreset.hasScript()) {
                 matrices.pushPose();
                 matrices.translate(startX - 26F / 2, -1.5F, 0.01);
                 PIDSScriptRenderer.render(matrices, vertexConsumers, immediate, textRenderer, facing, light, entity, pidsPreset, customMessages, hideArrivals, filteredPlatformIds,
                         pidsPreset.scriptWidth == null ? BACKGROUND_WIDTH : pidsPreset.scriptWidth,
                         pidsPreset.scriptHeight == null ? BACKGROUND_HEIGHT : pidsPreset.scriptHeight);
                 matrices.popPose();
+                matrices.popPose();
+                return;
             }
 
             matrices.popPose();

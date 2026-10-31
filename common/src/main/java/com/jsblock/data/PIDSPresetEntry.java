@@ -12,20 +12,19 @@ public class PIDSPresetEntry {
 
     private final String id;
     private final PIDSPreset preset;
-    private final boolean builtin;
 
-    public PIDSPresetEntry(String id, PIDSPreset preset, boolean builtin) {
+    public PIDSPresetEntry(String id, PIDSPreset preset) {
         this.id = id;
         this.preset = preset;
-        this.builtin = builtin;
     }
 
     public String getId() {
         return id;
     }
 
+    /** Display name of the preset, as declared by {@code name} in the JSON (defaults to the id). */
     public String getName() {
-        return id;
+        return preset.name == null || preset.name.isEmpty() ? id : preset.name;
     }
 
     public PIDSPreset getPreset() {
@@ -33,11 +32,11 @@ public class PIDSPresetEntry {
     }
 
     public ResourceLocation getThumbnail() {
-        return preset.image;
+        return preset.getThumbnail();
     }
 
     public boolean hasThumbnail() {
-        return preset.image != null;
+        return preset.hasThumbnail();
     }
 
     public int getTextColor() {
@@ -48,15 +47,17 @@ public class PIDSPresetEntry {
         return preset.visibility != null && row >= 0 && row < preset.visibility.length && preset.visibility[row];
     }
 
-    /**
-     * Whether this preset may be used by the given PIDS type.
-     * This fork has no per-type blacklist, so every preset is allowed.
-     */
+    /** Whether this preset may be used by the given PIDS type. */
     public boolean typeAllowed(String pidsType) {
-        return true;
+        return preset.typeAllowed(pidsType);
     }
 
     public boolean isBuiltin() {
-        return builtin;
+        return preset.builtin;
+    }
+
+    /** Whether the preset draws itself through a script rather than the built-in row renderer. */
+    public boolean isScriptPreset() {
+        return preset.hasScript();
     }
 }

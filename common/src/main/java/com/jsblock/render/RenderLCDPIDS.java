@@ -122,14 +122,15 @@ public class RenderLCDPIDS<T extends BlockEntityMapper> extends RenderPIDSBase<T
 
             matrices.popPose();
 
-            /* Script-drawn content, in the preset background's texel space */
-            if (pidsPreset.script != null && !pidsPreset.script.isEmpty()) {
+            /* Script presets draw their whole content themselves (JCM 2.3's ScriptPIDSPreset) */
+            if (pidsPreset.hasScript()) {
                 matrices.pushPose();
                 matrices.translate(startX - 21F / 2, -1.5F - 1F, 0.02);
                 PIDSScriptRenderer.render(matrices, vertexConsumers, immediate, textRenderer, facing, light, entity, pidsPreset, customMessages, hideArrivals, filteredPlatformIds,
                         pidsPreset.scriptWidth == null ? BACKGROUND_WIDTH : pidsPreset.scriptWidth,
                         pidsPreset.scriptHeight == null ? BACKGROUND_HEIGHT : pidsPreset.scriptHeight);
                 matrices.popPose();
+                return;
             }
 
             if (!filteredPlatformIds.isEmpty()) {

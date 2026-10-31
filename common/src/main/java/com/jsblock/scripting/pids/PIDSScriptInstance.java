@@ -1,5 +1,6 @@
 package com.jsblock.scripting.pids;
 
+import com.jsblock.data.PIDSPreset;
 import com.jsblock.scripting.primitive.ParsedScript;
 import com.jsblock.scripting.primitive.ScriptInstance;
 import mtr.mappings.BlockEntityMapper;
@@ -14,14 +15,14 @@ import java.util.List;
  */
 public class PIDSScriptInstance extends ScriptInstance<PIDSWrapper> {
     private final BlockEntityMapper blockEntity;
-    private final String presetId;
+    private final PIDSPreset preset;
     private volatile List<PIDSDrawCall<?>> renderCalls = Collections.emptyList();
 
-    public PIDSScriptInstance(ParsedScript parsedScript, PIDSScriptContext context, PIDSWrapper wrapper, BlockEntityMapper blockEntity, String presetId) {
+    public PIDSScriptInstance(ParsedScript parsedScript, PIDSScriptContext context, PIDSWrapper wrapper, BlockEntityMapper blockEntity, PIDSPreset preset) {
         super(context, parsedScript);
         setWrapperObject(wrapper);
         this.blockEntity = blockEntity;
-        this.presetId = presetId;
+        this.preset = preset;
     }
 
     public void saveRenderCalls(List<PIDSDrawCall<?>> calls) {
@@ -39,8 +40,8 @@ public class PIDSScriptInstance extends ScriptInstance<PIDSWrapper> {
         return renderCalls;
     }
 
-    public String getPresetId() {
-        return presetId;
+    public PIDSPreset getPreset() {
+        return preset;
     }
 
     @Override

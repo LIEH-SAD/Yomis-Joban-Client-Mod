@@ -5,6 +5,7 @@ import com.jsblock.client.ClientConfig;
 import com.jsblock.data.PIDSPreset;
 import com.jsblock.scripting.core.ScriptInstanceManager;
 import com.jsblock.scripting.core.ScriptManager;
+import com.jsblock.scripting.core.util.ConsoleJS;
 import com.jsblock.scripting.core.util.ScriptResourceUtil;
 import com.jsblock.scripting.core.util.TimingJS;
 import com.jsblock.scripting.primitive.ParsedScript;
@@ -13,10 +14,13 @@ import com.jsblock.scripting.resource.ScriptResourceLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
+import net.minecraft.server.packs.resources.ResourceManager;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import java.util.Collections;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -33,8 +37,10 @@ public final class Scripting {
     public static final String MOD_ID = "jsblock";
 
     private static final Map<ResourceLocation, String> externalScripts = new ConcurrentHashMap<>();
-    private static final Map<String, ParsedScript> inlineScripts = new ConcurrentHashMap<>();
+    private static final Map<PIDSPreset, Optional<ParsedScript>> presetScripts = new ConcurrentHashMap<>();
     private static final Pattern SCRIPT_LOCATION_PATTERN = Pattern.compile("[a-z0-9_.-]+:[a-z0-9/._-]+");
+    /** Resource manager of the reload currently in progress, see {@link #getResourceManager()}. */
+    private static volatile ResourceManager activeResourceManager;
     private static ScriptManager scriptManager;
     private static boolean initialized = false;
     private static ScriptRegistry registry;
@@ -90,11 +96,27 @@ public final class Scripting {
         getInstanceManager().tick();
     }
 
-    public static void reload() {
+    /**
+     * Reload all scripts.
+     * @param resourceManager the resource manager of the reload in progress; it holds the new pack contents
+     *                        while {@code Minecraft#getResourceManager()} still resolves against the old ones
+     */
+    public static void reload(ResourceManager resourceManager) {
         if (scriptManager == null) return;
+        if (resourceManager != null) activeResourceManager = resourceManager;
+        presetScripts.clear();
         scriptManager.reset();
-        clearInlineScripts();
         scriptManager.getResourceLoader().reload();
+    }
+
+    /**
+     * @return the resource manager of the latest reload, preferring it over {@code Minecraft#getResourceManager()}
+     */
+    public static ResourceManager getResourceManager() {
+        final ResourceManager reloading = activeResourceManager;
+        if (reloading != null) return reloading;
+        final Minecraft minecraft = Minecraft.getInstance();
+        return minecraft == null ? null : minecraft.getResourceManager();
     }
 
     public static void registerExternalScript(ResourceLocation location, String content) {
@@ -108,13 +130,13 @@ public final class Scripting {
     public static InputStream readResource(ResourceLocation location) {
         final String external = externalScripts.get(location);
         if (external != null) {
-            return new ByteArrayInputStream(external.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return new ByteArrayInputStream(external.getBytes(StandardCharsets.UTF_8));
         }
 
-        final Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft == null) return null;
+        final ResourceManager resourceManager = getResourceManager();
+        if (resourceManager == null) return null;
         try {
-            final Optional<Resource> resource = minecraft.getResourceManager().getResource(location);
+            final Optional<Resource> resource = resourceManager.getResource(location);
             return resource.map(r -> {
                 try {
                     return r.open();
@@ -129,10 +151,10 @@ public final class Scripting {
 
     public static boolean resourceExists(ResourceLocation location) {
         if (externalScripts.containsKey(location)) return true;
-        final Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft == null) return false;
+        final ResourceManager resourceManager = getResourceManager();
+        if (resourceManager == null) return false;
         try {
-            return minecraft.getResourceManager().getResource(location).isPresent();
+            return resourceManager.getResource(location).isPresent();
         } catch (Exception e) {
             return false;
         }
@@ -142,37 +164,72 @@ public final class Scripting {
         return ClientConfig.getDisableScriptRestrictions();
     }
 
+    /** Whether the given text is a script resource location rather than inline source code. */
+    public static boolean isScriptLocation(String text) {
+        return text != null && !text.contains("\n") && SCRIPT_LOCATION_PATTERN.matcher(text).matches();
+    }
+
     /**
-     * Resolve the script attached to a PIDS preset.
-     * The {@code script} field may be either a resource location ({@code namespace:scripts/foo.js})
-     * or inline JS source code.
+     * Resolve (and cache) the script attached to a PIDS preset.<br>
+     * Parsing errors are logged and make the preset render nothing, exactly like JCM 2.3.
+     * @return the parsed script, or {@code null} if the preset has no (working) script
      */
     public static ParsedScript resolvePidsScript(PIDSPreset preset) {
-        if (scriptManager == null || preset == null || preset.script == null || preset.script.isEmpty()) return null;
-        final String script = preset.script;
+        if (scriptManager == null || preset == null || !preset.hasScript()) return null;
+        if (ClientConfig.getSkipScriptParsing()) return null;
+        return presetScripts.computeIfAbsent(preset, p -> Optional.ofNullable(parsePresetScript(p))).orElse(null);
+    }
 
-        if (!script.contains("\n") && SCRIPT_LOCATION_PATTERN.matcher(script).matches()) {
-            final ResourceLocation location = new ResourceLocation(script);
-            final ParsedScript loaded = scriptManager.getResourceLoader().getParsedScript(location);
-            if (loaded != null) return loaded;
+    private static ParsedScript parsePresetScript(PIDSPreset preset) {
+        final List<ScriptContent> contents = new ArrayList<>();
 
-            final String content = ScriptResourceUtil.readString(location);
-            return getInlineScript(script, content == null ? null : content);
+        for (ScriptContent scriptContent : preset.scriptContents) {
+            final String content = scriptContent.getContent();
+            /* The legacy "script" key may either hold inline source or point at a script resource */
+            if (isScriptLocation(content)) {
+                final ResourceLocation location = new ResourceLocation(content);
+                final String read = ScriptResourceUtil.readString(location);
+                if (read == null || read.trim().isEmpty()) {
+                    logError(preset, "Script file " + location + " is empty or missing.");
+                    continue;
+                }
+                contents.add(new ScriptContent(location, read));
+            } else {
+                contents.add(scriptContent);
+            }
         }
 
-        return getInlineScript(script, script);
+        for (ResourceLocation location : preset.scriptFiles) {
+            final String read = ScriptResourceUtil.readString(location);
+            if (read == null || read.trim().isEmpty()) {
+                logError(preset, "Script file " + location + " is empty or missing.");
+                continue;
+            }
+            contents.add(new ScriptContent(location, read));
+        }
+
+        if (contents.isEmpty()) return null;
+
+        final String displayName = "pids_preset:" + (preset.id == null ? "unnamed" : preset.id);
+        final ParsedScript parsedScript = scriptManager.parseScript(displayName, "pids",
+                ParsedScript.Configuration.create(contents, preset.scriptLang, preset.scriptRateLimit), false);
+
+        if (parsedScript == null) {
+            logError(preset, "Failed to parse the script of this preset.");
+        } else {
+            Joban.LOGGER.info("[YJCM Scripting] Loaded PIDS preset script {}", displayName);
+        }
+
+        return parsedScript;
     }
 
-    private static ParsedScript getInlineScript(String cacheKey, String source) {
-        if (source == null || source.isEmpty()) return null;
-        return inlineScripts.computeIfAbsent(cacheKey, key -> scriptManager.parseScript("inline:" + key,
-                "pids",
-                ParsedScript.Configuration.create(Collections.singletonList(new ScriptContent(new ResourceLocation(MOD_ID, "scripts/inline.js"), source)),
-                        com.jsblock.scripting.api.ScriptingLanguage.RHINO_JS, 0),
-                false));
+    private static void logError(PIDSPreset preset, String message) {
+        final String text = "[YJCM Scripting] PIDS preset \"" + (preset.id == null ? "unnamed" : preset.id) + "\": " + message;
+        Joban.LOGGER.error(text);
+        ConsoleJS.errorRaw(text);
     }
 
-    public static void clearInlineScripts() {
-        inlineScripts.clear();
+    public static void clearPresetScripts() {
+        presetScripts.clear();
     }
 }
