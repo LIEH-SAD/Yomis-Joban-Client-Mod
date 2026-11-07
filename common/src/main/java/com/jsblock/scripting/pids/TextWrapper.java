@@ -19,11 +19,20 @@ import net.minecraft.resources.ResourceLocation;
  * @author LX86 (JCM)
  */
 public class TextWrapper extends PIDSDrawCall<TextWrapper> {
+    /* JCM 2.x's overflow modes; which one a script asked for decides whether its box
+       constrains the run at all. */
+    public static final int OVERFLOW_NONE = 0;
+    public static final int OVERFLOW_STRETCH_XY = 1;
+    public static final int OVERFLOW_SCALE_XY = 2;
+    public static final int OVERFLOW_WRAP = 3;
+    public static final int OVERFLOW_MARQUEE = 4;
+
     private String text = "";
     private int color = IGui.ARGB_WHITE;
     private boolean shadowed = false;
     private boolean naturalLight = false;
     private float scale = 1;
+    private int overflowMode = OVERFLOW_NONE;
     private boolean keepRatio = true;
     private boolean wrapText = false;
     private boolean marquee = false;
@@ -97,7 +106,25 @@ public class TextWrapper extends PIDSDrawCall<TextWrapper> {
     }
 
     public TextWrapper font(String font) {
-        this.font = font == null || font.isEmpty() ? "mtr:mtr" : font;
+        if (font == null || font.isEmpty()) {
+            this.font = "mtr:mtr";
+        } else {
+            /* The name ends up in a ResourceLocation at render time, so fold exactly once here and a
+               pack that writes "MTR:MTR" keeps drawing text instead of throwing every frame. */
+            this.font = com.jsblock.scripting.core.util.ScriptResourceUtil.lenientLocation(font).toString();
+        }
+        return this;
+    }
+
+    /**
+     * {@code font(Object)} — JCM 2.x lets a script hand in the AWT font that
+     * {@code Resources.getSystemFont(...)} returns.<br>
+     * World-space text here is drawn with the game's glyph renderer, which takes a font
+     * {@link ResourceLocation} rather than an AWT instance, so an AWT font keeps the default MTR font
+     * instead of breaking the label.
+     */
+    public TextWrapper font(Object font) {
+        if (font instanceof CharSequence) return font(font.toString());
         return this;
     }
 
@@ -115,6 +142,7 @@ public class TextWrapper extends PIDSDrawCall<TextWrapper> {
     /** Stretch the text to fill both the width and the height of the box. */
     public TextWrapper stretchXY() {
         this.keepRatio = false;
+        this.overflowMode = OVERFLOW_STRETCH_XY;
         return this;
     }
 
@@ -126,12 +154,14 @@ public class TextWrapper extends PIDSDrawCall<TextWrapper> {
     /** Keep the aspect ratio while scaling the text down so it fits the box. */
     public TextWrapper scaleXY() {
         this.keepRatio = true;
+        this.overflowMode = OVERFLOW_SCALE_XY;
         return this;
     }
 
     /** Split the text into as many lines as needed to fit the box width. */
     public TextWrapper wrapText() {
         this.wrapText = true;
+        this.overflowMode = OVERFLOW_WRAP;
         return this;
     }
 
@@ -147,6 +177,7 @@ public class TextWrapper extends PIDSDrawCall<TextWrapper> {
     public TextWrapper marquee(double durationTickOverride) {
         this.marquee = true;
         this.marqueeDurationTicks = durationTickOverride;
+        this.overflowMode = OVERFLOW_MARQUEE;
         return this;
     }
 
@@ -213,11 +244,40 @@ public class TextWrapper extends PIDSDrawCall<TextWrapper> {
 
         if (marquee && measureWidth(fontRenderer, renderText) > width / scale) {
             renderMarquee(matrices, immediate, fontRenderer, renderText, renderLight);
-        } else if (bold || italic || lineHeightFactor != 1) {
-            IDrawingJoban.drawStringWithFontStyled(matrices, fontRenderer, immediate, renderText, alignment, IGui.VerticalAlignment.TOP, alignment, x, y, width, height, scale, keepRatio, color, shadowed, renderLight, font, false, null, bold, italic, lineHeightFactor);
-        } else {
-            IDrawingJoban.drawStringWithFont(matrices, fontRenderer, immediate, renderText, alignment, IGui.VerticalAlignment.TOP, x, y, width, height, scale, keepRatio, color, shadowed, renderLight, font);
+            immediate.endBatch();
+            return;
         }
+
+        /* drawStringWithFont divides the pose by its scale argument, so 1/textScale is what
+           makes .scale(k) multiply the glyph size -- which is how a preset author writes it. */
+        final float drawScale = scale == 0 ? 1F : 1F / scale;
+
+        /* The box only constrains a run that asked for an overflow mode. Without one it is
+           just where the label sits: MTR would otherwise squeeze the glyphs to fit it, which
+           is not what size(...) means to a preset author. */
+        final float maxWidth;
+        final float maxHeight;
+        switch (overflowMode) {
+            case OVERFLOW_STRETCH_XY:
+            case OVERFLOW_SCALE_XY:
+                maxWidth = width;
+                maxHeight = height;
+                break;
+            case OVERFLOW_WRAP:
+            case OVERFLOW_MARQUEE:
+                maxWidth = width;
+                maxHeight = -1F;
+                break;
+            default:
+                maxWidth = -1F;
+                maxHeight = -1F;
+                break;
+        }
+
+        /* sameSize = true, i.e. no CJK doubling: a JCM 2.x preset is laid out for MTR 4's
+           renderer, which drew its text without the extra multiplier. Leaving it on made every
+           Chinese label twice the size its author wrote, straight off the panel. */
+        IDrawingJoban.drawStringWithFontStyled(matrices, fontRenderer, immediate, renderText, alignment, IGui.VerticalAlignment.TOP, alignment, x, y, maxWidth, maxHeight, drawScale, keepRatio, color, shadowed, renderLight, font, true, null, bold, italic, lineHeightFactor);
 
         immediate.endBatch();
     }
@@ -249,10 +309,9 @@ public class TextWrapper extends PIDSDrawCall<TextWrapper> {
         for (int i = 0; i < str.length(); i++) {
             if (pixelOffset >= 0 && pixelOffset <= boxWidth) {
                 final String character = str.substring(i, i + 1);
-                final int extraScale = IGui.isCjk(character) ? 2 : 1;
                 matrices.pushPose();
                 matrices.translate(x + pixelOffset * scale, y, 0);
-                matrices.scale(scale * extraScale, scale * extraScale, scale);
+                matrices.scale(scale, scale, scale);
                 UtilitiesClient.drawInBatch(fontRenderer, Text.literal(character).setStyle(style).getVisualOrderText(), 0, 0, shadedColor, shadowed, matrices.last().pose(), immediate, 0, light);
                 matrices.popPose();
             }
@@ -292,8 +351,9 @@ public class TextWrapper extends PIDSDrawCall<TextWrapper> {
     }
 
     private static int charWidth(Font fontRenderer, Style style, String str) {
-        final int width = fontRenderer.width(Text.literal(str).setStyle(style).getVisualOrderText());
-        return IGui.isCjk(str) ? width * 2 : width;
+        /* No CJK doubling: the run is drawn with sameSize = true, so the widths that decide
+           wrapping and measuring have to be the widths the renderer will draw. */
+        return fontRenderer.width(Text.literal(str).setStyle(style).getVisualOrderText());
     }
 
     private int measureWidth(Font fontRenderer, String str) {

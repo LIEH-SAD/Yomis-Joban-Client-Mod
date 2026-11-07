@@ -43,7 +43,7 @@ public class TextureWrapper extends PIDSDrawCall<TextureWrapper> {
     }
 
     public TextureWrapper color(Object color) {
-        this.color = parseColor(color, IGui.ARGB_WHITE);
+        this.color = opaque(parseColor(color, IGui.ARGB_WHITE));
         return this;
     }
 
@@ -94,15 +94,16 @@ public class TextureWrapper extends PIDSDrawCall<TextureWrapper> {
 
     @Override
     public void render(PoseStack matrices, MultiBufferSource vertexConsumers, MultiBufferSource.BufferSource immediate, Font font, Direction facing, int light) {
-        final VertexConsumer vertexConsumer = vertexConsumers.getBuffer(MoreRenderLayers.getLight(texture, false));
+        /* The alpha switch has to be on: a script texture is routinely mostly transparent, and
+           through the opaque layer that transparent area comes out as a solid white square. */
+        final VertexConsumer vertexConsumer = vertexConsumers.getBuffer(MoreRenderLayers.getLight(texture, true));
         IDrawing.drawTexture(matrices, vertexConsumer, x, y, 0, x + width, y + height, 0, u1, v1, u2, v2, facing, color, resolveLight(naturalLight, light));
     }
 
     static ResourceLocation toTexture(Object obj) {
         if (obj == null || obj == com.jsblock.lib.org.mozilla.javascript.Undefined.instance) return null;
-        if (obj instanceof ResourceLocation) return (ResourceLocation) obj;
-        final String str = String.valueOf(obj);
-        if (str.contains(":")) return new ResourceLocation(str);
-        return new ResourceLocation("jsblock", str);
+        /* Packs name their files with capitals and other characters a ResourceLocation rejects, so the
+           lookup goes through the same lenient resolution the rest of the script API uses. */
+        return com.jsblock.scripting.core.util.ScriptResourceUtil.resolveExisting(String.valueOf(obj));
     }
 }

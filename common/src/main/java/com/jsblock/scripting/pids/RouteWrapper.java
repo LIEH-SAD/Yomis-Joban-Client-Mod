@@ -34,13 +34,15 @@ public class RouteWrapper {
         if (route == null) return null;
         final String routeNumber = route.isLightRailRoute && route.lightRailRouteNumber != null && !route.lightRailRouteNumber.isEmpty() ? route.lightRailRouteNumber : route.name;
         final Route.CircularState state = route.circularState == null ? Route.CircularState.NONE : route.circularState;
+        /* MTR 3.x says ANTICLOCKWISE, JCM 2.x says ANTI_CLOCKWISE; scripts are written against the latter. */
+        final String circularState = state == Route.CircularState.ANTICLOCKWISE ? "ANTI_CLOCKWISE" : state.name();
         final List<Long> platformIds = new ArrayList<>();
         if (route.platformIds != null) {
             for (final Route.RoutePlatform routePlatform : route.platformIds) {
                 platformIds.add(routePlatform.platformId);
             }
         }
-        return new RouteWrapper(route.id, route.name, routeNumber, route.color, state.name(), Collections.unmodifiableList(platformIds));
+        return new RouteWrapper(route.id, route.name, routeNumber, route.color, circularState, Collections.unmodifiableList(platformIds));
     }
 
     public long id() {

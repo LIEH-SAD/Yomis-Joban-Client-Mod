@@ -2,7 +2,6 @@ package com.jsblock.render;
 
 import com.jsblock.Joban;
 import com.jsblock.data.PIDSPreset;
-import com.jsblock.scripting.pids.PIDSScriptRenderer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -45,9 +44,6 @@ public class RenderRVPIDS<T extends BlockEntityMapper> extends RenderPIDSBase<T>
     private static final float BACKGROUND_WIDTH = 119F;
     private static final float BACKGROUND_HEIGHT = 65.8F;
     private static final float BACKGROUND_Y = -9.5F;
-    /* JCM 2.3's RV PIDS script canvas, as reported by pids.width / pids.height */
-    private static final float SCRIPT_CANVAS_WIDTH = 136F;
-    private static final float SCRIPT_CANVAS_HEIGHT = 76F;
     private static final double OVERLAY_DISTANCE = 0.1;
     private final float scale;
     private final float totalScaledWidth;
@@ -139,53 +135,57 @@ public class RenderRVPIDS<T extends BlockEntityMapper> extends RenderPIDSBase<T>
             /* True if there's different cars running on the schedule list */
             showCarLength = minCars != maxCars;
 
+            /* If the player is too far away from the PIDS that not even the train renders.
+               Checked before the panel is placed, so a script does not run for a panel nobody can
+               see -- and so that nothing has been pushed onto the matrix stack yet. */
+            if (RenderTrains.shouldNotRender(pos, Math.min(MAX_VIEW_DISTANCE, RenderTrains.maxTrainRenderDistance), rotate90 ? null : facing)) {
+                return;
+            }
+
+            /* A preset with a script paints the whole panel itself, its own background included,
+               against the canvas JCM 2.x gives its PIDS type. The built-in path below is skipped
+               entirely for it: that path scales the stack by 1/scale to match a texture's pixels,
+               and mapping the canvas onto those pixels as well drew the script's content at the
+               wrong size and in the wrong place -- and drawing the preset's image here as well
+               would double up the background the script already draws. Its placement is JCM 2.x's
+               own literals, from the block centre; see RenderPIDSBase#renderScriptPanel. A pack
+               whose script is missing or will not parse paints nothing, and this then draws the
+               built-in panel so the pack still shows its background. */
+            if (pidsPreset.hasScript() && renderScriptPanel(matrices, vertexConsumers, immediate, textRenderer, entity, world, facing, pidsPreset, pidsType, customMessages, hideArrivals, hidePlatforms, filteredPlatformIds, rotate90)) {
+                return;
+            }
+
             matrices.pushPose();
-            matrices.translate(0.5, 0, 0.5);
-            UtilitiesClient.rotateYDegrees(matrices, (rotate90 ? 90 : 0) - facing.toYRot());
-            UtilitiesClient.rotateZDegrees(matrices, 180);
-            UtilitiesClient.rotateXDegrees(matrices, rotation);
-            matrices.translate((startX - 8) / 16, -startY / 16, (startZ - 8) / 16 - SMALL_OFFSET * 2);
-            matrices.scale(1F / scale, 1F / scale, 1F / scale);
+            final boolean projector = isProjector(entity);
+            if (projector) {
+                applyProjectorBuiltInTransform(matrices, entity, world, facing, rotate90, scale, 0F);
+            } else {
+                matrices.translate(0.5, 0, 0.5);
+                UtilitiesClient.rotateYDegrees(matrices, (rotate90 ? 90 : 0) - facing.toYRot());
+                UtilitiesClient.rotateZDegrees(matrices, 180);
+                UtilitiesClient.rotateXDegrees(matrices, rotation);
+                matrices.translate((startX - 8) / 16, -startY / 16, (startZ - 8) / 16 - SMALL_OFFSET * 2);
+                matrices.scale(1F / scale, 1F / scale, 1F / scale);
+            }
 
             /* Render Background */
             if (pidsPreset.image != null) {
+                if (projector) {
+                    matrices.pushPose();
+                    matrices.translate(startX - 26F / 2F, -1.5F, 0.02F);
+                    drawProjectorFrameIfAiming(world, facing, matrices, vertexConsumers, (int) BACKGROUND_WIDTH, (int) BACKGROUND_HEIGHT);
+                    matrices.popPose();
+                }
                 final VertexConsumer vertexConsumerBackground = vertexConsumers.getBuffer(MoreRenderLayers.getLight(pidsPreset.image, false));
                 matrices.translate(0, BACKGROUND_Y, 0.01);
                 drawTexture(matrices, vertexConsumerBackground, startX - 26F / 2, -1.5F, BACKGROUND_WIDTH, BACKGROUND_HEIGHT, facing, ARGB_WHITE, MAX_LIGHT_GLOWING);
             }
 
-            /* If the player is too far away from the PIDS that not even the train renders */
-            if (RenderTrains.shouldNotRender(pos, Math.min(MAX_VIEW_DISTANCE, RenderTrains.maxTrainRenderDistance), rotate90 ? null : facing)) {
-                matrices.popPose();
-                return;
-            }
-
-            /* Script presets draw their whole content themselves (JCM 2.3's ScriptPIDSPreset),
-               so neither the clock nor the weather icon is rendered for them. */
-            if (pidsPreset.hasScript()) {
-                final float scriptWidth = pidsPreset.scriptWidth == null ? SCRIPT_CANVAS_WIDTH : pidsPreset.scriptWidth;
-                final float scriptHeight = pidsPreset.scriptHeight == null ? SCRIPT_CANVAS_HEIGHT : pidsPreset.scriptHeight;
-                final float scriptScaleX = BACKGROUND_WIDTH / scriptWidth;
-                final float scriptScaleY = BACKGROUND_HEIGHT / scriptHeight;
-
-                matrices.pushPose();
-                /* The background is drawn with BACKGROUND_Y already applied to this matrix stack,
-                   so the script canvas only adds the texture's own -1.5 offset. */
-                matrices.translate(startX - 26F / 2, -1.5F, 0.02);
-                matrices.scale(scriptScaleX, scriptScaleY, 1);
-                PIDSScriptRenderer.render(matrices, vertexConsumers, immediate, textRenderer, facing, light, entity, pidsPreset, pidsType, customMessages, hideArrivals, filteredPlatformIds,
-                        scriptWidth, scriptHeight, hidePlatforms, scale);
-                matrices.popPose();
-                matrices.popPose();
-                return;
-            }
-
-            /* Render Clock */
+            /* Render Clock and Weather icon, which place themselves against the background above. */
             if(pidsPreset.showClock) {
                 renderClock(matrices, textRenderer, immediate, world, textFont);
             }
 
-            /* Render Weather icon */
             if(pidsPreset.showWeather) {
                 renderWeather(matrices, vertexConsumers, world, facing);
             }
@@ -196,12 +196,15 @@ public class RenderRVPIDS<T extends BlockEntityMapper> extends RenderPIDSBase<T>
             int entryIndex = 0;
 
             for (int i = 0; i < maxArrivals; i++) {
+                /* A hidden row renders nothing at all (not even a custom message) and does not consume an arrival */
+                if (hideArrivals[i]) continue;
+
                 final String destinationString;
                 final boolean useCustomMessage;
                 final ScheduleEntry currentSchedule = entryIndex < scheduleList.size() ? scheduleList.get(entryIndex) : null;
                 final Route route = currentSchedule == null ? null : ClientData.DATA_CACHE.routeIdMap.get(currentSchedule.routeId);
 
-                if (entryIndex < scheduleList.size() && !hideArrivals[i] && route != null) {
+                if (entryIndex < scheduleList.size() && route != null) {
                     final String[] destinationSplit = ClientData.DATA_CACHE.getFormattedRouteDestination(route, currentSchedule.currentStationIndex, "").split("\\|");
                     final boolean isLightRailRoute = route.isLightRailRoute;
                     final String[] routeNumberSplit = route.lightRailRouteNumber.split("\\|");
@@ -229,12 +232,17 @@ public class RenderRVPIDS<T extends BlockEntityMapper> extends RenderPIDSBase<T>
                 }
 
                 matrices.pushPose();
-                matrices.translate(0.5, 0, 0.5);
-                UtilitiesClient.rotateYDegrees(matrices, (rotate90 ? 90 : 0) - facing.toYRot());
-                UtilitiesClient.rotateZDegrees(matrices, 180);
-                UtilitiesClient.rotateXDegrees(matrices, rotation);
-                matrices.translate((startX - 8) / 16, -startY / 16 + i * maxHeight / maxArrivals / 16, (startZ - 8) / 16 - SMALL_OFFSET * 4);
-                matrices.scale(1F / (scale / 2), 1F / (scale / 2), 1F / (scale / 2));
+                if (projector) {
+                    /* Each row advances down the panel by its share of the panel's height. */
+                    applyProjectorBuiltInTransform(matrices, entity, world, facing, rotate90, scale / 2, i * maxHeight / maxArrivals / 16);
+                } else {
+                    matrices.translate(0.5, 0, 0.5);
+                    UtilitiesClient.rotateYDegrees(matrices, (rotate90 ? 90 : 0) - facing.toYRot());
+                    UtilitiesClient.rotateZDegrees(matrices, 180);
+                    UtilitiesClient.rotateXDegrees(matrices, rotation);
+                    matrices.translate((startX - 8) / 16, -startY / 16 + i * maxHeight / maxArrivals / 16, (startZ - 8) / 16 - SMALL_OFFSET * 4);
+                    matrices.scale(1F / (scale / 2), 1F / (scale / 2), 1F / (scale / 2));
+                }
 
                 if (useCustomMessage) {
                     renderTextWithOffset(matrices, textRenderer, immediate, destinationString, 0, 0, arrivalMaxWidth - platformMaxWidth, 4, textColor, MAX_LIGHT_GLOWING, HorizontalAlignment.LEFT, VerticalAlignment.TOP, false, textFont);
@@ -293,8 +301,6 @@ public class RenderRVPIDS<T extends BlockEntityMapper> extends RenderPIDSBase<T>
 
                 matrices.popPose();
 
-                /* Don't skip the current entry if the current row is hidden */
-                if(hideArrivals[i]) continue;
                 if(useCustomMessage && pidsPreset.customTextPushArrival) continue;
                 entryIndex++;
             }

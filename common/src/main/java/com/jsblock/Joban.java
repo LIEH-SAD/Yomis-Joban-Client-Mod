@@ -90,6 +90,7 @@ public class Joban {
             registerBlockItem.accept("op_button", Blocks.OP_BUTTONS, ItemGroups.MAIN);
             registerBlockItem.accept("pids_1a", Blocks.PIDS_1A, ItemGroups.PIDS);
             registerBlockItem.accept("pids_4", Blocks.PIDS_LCD, ItemGroups.PIDS);
+            registerBlockItem.accept("pids_projector", Blocks.PIDS_PROJECTOR, ItemGroups.PIDS);
             registerBlockItem.accept("pids_rv", Blocks.PIDS_RV_TCL, ItemGroups.PIDS);
             registerBlockItem.accept("pids_rv_sil", Blocks.PIDS_RV_SIL_1, ItemGroups.PIDS);
             registerBlockItem.accept("pids_rv_sil_2", Blocks.PIDS_RV_SIL_2, ItemGroups.PIDS);
@@ -135,6 +136,7 @@ public class Joban {
             registerBlockEntityType.accept("pids_rv_sil", BlockEntityTypes.PIDS_RV_SIL_TILE_ENTITY_1);
             registerBlockEntityType.accept("pids_rv_sil_2", BlockEntityTypes.PIDS_RV_SIL_TILE_ENTITY_2);
             registerBlockEntityType.accept("pids_4a", BlockEntityTypes.PIDS_LCD_TILE_ENTITY);
+            registerBlockEntityType.accept("pids_projector", BlockEntityTypes.PIDS_PROJECTOR_TILE_ENTITY);
             registerBlockEntityType.accept("signal_light_red_1", BlockEntityTypes.SIGNAL_LIGHT_RED_ENTITY_1);
             registerBlockEntityType.accept("signal_light_red_2", BlockEntityTypes.SIGNAL_LIGHT_RED_ENTITY_2);
             registerBlockEntityType.accept("signal_light_blue", BlockEntityTypes.SIGNAL_LIGHT_BLUE_ENTITY);
@@ -152,6 +154,7 @@ public class Joban {
             Registry.registerNetworkReceiver(PACKET_UPDATE_FARESAVER_CONFIG, PacketServer::receiveFaresaverC2S);
             Registry.registerNetworkReceiver(PACKET_UPDATE_JOBAN_PIDS_CONFIG, PacketServer::receiveJobanPIDSConfigC2S);
             Registry.registerNetworkReceiver(PACKET_UPDATE_RV_PIDS_CONFIG, PacketServer::receiveRVPIDSConfigC2S);
+            Registry.registerNetworkReceiver(PACKET_UPDATE_PIDS_PROJECTOR, PacketServer::receivePIDSProjectorC2S);
             Registry.registerNetworkReceiver(PACKET_UPDATE_SOUND_LOOPER_CONFIG, PacketServer::receiveSoundLooperC2S);
             Registry.registerNetworkReceiver(PACKET_UPDATE_SUBSIDY_CONFIG, PacketServer::receiveSubsidyC2S);
 

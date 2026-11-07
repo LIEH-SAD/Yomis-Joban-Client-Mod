@@ -31,10 +31,11 @@ function render(ctx, state, pids) {
             let routeNumber = TextUtil.cycleString(arrival.routeNumber());
             let destinationStr = TextUtil.cycleString(arrival.destination()).trim();
 
-            // MTR 3.x spells this state ANTICLOCKWISE (MTR 4.x uses ANTI_CLOCKWISE).
+            // JCM 2.x spells the anticlockwise state ANTI_CLOCKWISE; accept both spellings so the label
+            // survives whichever MTR generation produced the arrival.
             if (arrival.circularState().toString() == "CLOCKWISE") {
                 destinationStr = TextUtil.cycleString("Clockwise via ") + destinationStr;
-            } else if (arrival.circularState().toString() == "ANTICLOCKWISE") {
+            } else if (arrival.circularState().toString() == "ANTI_CLOCKWISE" || arrival.circularState().toString() == "ANTICLOCKWISE") {
                 destinationStr = TextUtil.cycleString("Anticlockwise via ") + destinationStr;
             }
 

@@ -35,7 +35,7 @@ public class RectangleWrapper extends PIDSDrawCall<RectangleWrapper> {
     }
 
     public RectangleWrapper color(Object color) {
-        this.color = parseColor(color, IGui.ARGB_WHITE);
+        this.color = opaque(parseColor(color, IGui.ARGB_WHITE));
         return this;
     }
 

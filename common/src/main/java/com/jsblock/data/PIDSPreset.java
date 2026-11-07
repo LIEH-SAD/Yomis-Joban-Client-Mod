@@ -141,7 +141,7 @@ public class PIDSPreset {
         final JsonArray scriptFileArray = getArray(json, "scriptFiles");
         if (scriptFileArray != null) {
             for (final JsonElement element : scriptFileArray) {
-                scriptFiles.add(new ResourceLocation(element.getAsString()));
+                scriptFiles.add(com.jsblock.scripting.core.util.ScriptResourceUtil.lenientLocation(element.getAsString()));
             }
         }
 
@@ -214,7 +214,9 @@ public class PIDSPreset {
     }
 
     private static ResourceLocation getResourceLocation(JsonObject json, String key) {
-        return json.has(key) && !json.get(key).isJsonNull() ? new ResourceLocation(json.get(key).getAsString()) : null;
+        return json.has(key) && !json.get(key).isJsonNull()
+                ? com.jsblock.scripting.core.util.ScriptResourceUtil.lenientLocation(json.get(key).getAsString())
+                : null;
     }
 
     private static boolean getBoolean(JsonObject json, String key, boolean fallback) {

@@ -56,8 +56,16 @@ def relocateRhinoSources = tasks.register("relocateRhinoSources", Sync) {
 		}.each { File source ->
 			// Byte level, so the replacement cannot damage any non-ASCII comment
 			// or string literal of the original file.
+			//
+			// Both the dotted and the slashed spelling have to be rewritten: type
+			// descriptors embedded by the bytecode generator (`(Lorg/mozilla/
+			// javascript/Context;)V`) and script class names ("org.mozilla.javascript.
+			// gen.1") are not covered by the dotted replacement alone, and a single
+			// missed descriptor makes every generated class fail verification.
 			def text = new String(source.bytes, "ISO-8859-1")
-			def relocated = text.replace("org.mozilla", relocatedPackage)
+			def relocated = text
+					.replace("org.mozilla", relocatedPackage)
+					.replace("org/mozilla", relocatedPackage.replace('.', '/'))
 			if (relocated != text) {
 				source.bytes = relocated.getBytes("ISO-8859-1")
 			}

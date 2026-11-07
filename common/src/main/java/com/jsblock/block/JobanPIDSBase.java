@@ -22,6 +22,17 @@ import java.util.Set;
  * @see com.jsblock.block.BlockPIDSBaseHorizontal
  */
 public abstract class JobanPIDSBase extends BlockPIDSBaseHorizontal {
+
+    protected JobanPIDSBase() {
+    }
+
+    /**
+     * For shapes that need their own block properties.
+     * @see com.jsblock.block.PIDSProjector
+     */
+    protected JobanPIDSBase(Properties properties) {
+        super(properties);
+    }
     @Override
     public InteractionResult use(BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         return IBlock.checkHoldingBrush(world, player, () -> {
@@ -119,6 +130,17 @@ public abstract class JobanPIDSBase extends BlockPIDSBaseHorizontal {
 
         public String getPresetID() {
             return presetID;
+        }
+
+        /**
+         * Sets the preset this board draws.
+         * <p>Separate from {@link #setData} because a projector has no companion half to keep in
+         * step, and its screen edits the preset on its own.
+         */
+        public void setPresetID(String presetID) {
+            this.presetID = presetID;
+            this.setChanged();
+            this.syncData();
         }
 
         public boolean getAutoSwitchEnabled() {

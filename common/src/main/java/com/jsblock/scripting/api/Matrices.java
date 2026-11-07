@@ -64,6 +64,11 @@ public class Matrices {
         }
     }
 
+    /** @return the combined transformation, so a script can hand it to a draw call expecting a matrix */
+    public org.joml.Matrix4f last() {
+        return poseStack.last().pose();
+    }
+
     /** Applies this transformation on top of an existing render matrix stack. */
     public void apply(PoseStack matrices) {
         matrices.last().pose().mul(poseStack.last().pose());

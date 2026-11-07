@@ -56,7 +56,11 @@ public class ScriptManager {
         }
 
         final ParsedScript parsedScript = scriptingLanguage.createParsedScript(this, displayName, contextName, configuration).parse(verboseLogging);
-        finishParseScriptEvent.invoke(e -> e.accept(parsedScript));
+        /* A script that failed to parse is reported by the backend and is null here; passing it on
+           would hand every listener a script whose functions do not exist. */
+        if (parsedScript != null) {
+            finishParseScriptEvent.invoke(e -> e.accept(parsedScript));
+        }
         return parsedScript;
     }
 
@@ -78,6 +82,18 @@ public class ScriptManager {
         script.exposeClassInstance("Java", new JavaUtilJS());
         script.exposeClassInstance("console", new ConsoleJS());
         script.exposeClassInstance("Timing", new TimingJS());
+
+        /* JCM 2.x globals that a modern preset expects to find already defined. Each one is a plain
+           class or instance handed to the scope, so a script that never mentions it pays nothing. */
+        script.exposeClass("Vector3f", com.jsblock.scripting.api.Vector3f.class);
+        script.exposeClass("StateTracker", com.jsblock.scripting.api.StateTracker.class);
+        script.exposeClass("CycleTracker", com.jsblock.scripting.api.CycleTracker.class);
+        script.exposeClass("RateLimit", RateLimitJS.class);
+        script.exposeClass("Files", FilesJS.class);
+        script.exposeClass("Networking", NetworkJS.Networking.class);
+        script.exposeClass("NetworkResponse", NetworkJS.NetworkResponse.class);
+        script.exposeClass("BackgroundWorker", NetworkJS.BackgroundWorker.class);
+        script.exposeClass("MTRClientData", mtr.client.ClientData.class);
     }
 
     public Future<?> submitScriptTask(ExecutorService executorService, Runnable runnable) {

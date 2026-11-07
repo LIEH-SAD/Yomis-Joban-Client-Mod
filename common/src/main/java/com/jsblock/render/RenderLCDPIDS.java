@@ -1,7 +1,6 @@
 package com.jsblock.render;
 
 import com.jsblock.data.PIDSPreset;
-import com.jsblock.scripting.pids.PIDSScriptRenderer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -44,9 +43,6 @@ public class RenderLCDPIDS<T extends BlockEntityMapper> extends RenderPIDSBase<T
 
     private static final float BACKGROUND_WIDTH = 111F;
     private static final float BACKGROUND_HEIGHT = 60F;
-    /* JCM 2.3's LCD PIDS script canvas, as reported by pids.width / pids.height */
-    private static final float SCRIPT_CANVAS_WIDTH = 133F;
-    private static final float SCRIPT_CANVAS_HEIGHT = 72F;
     private static final String PIDS_TYPE = "lcd_pids";
     private final float scale;
     private final float totalScaledWidth;
@@ -87,6 +83,9 @@ public class RenderLCDPIDS<T extends BlockEntityMapper> extends RenderPIDSBase<T
         this.showPlatforms = showPlatforms;
         this.rotation = rotation;
         this.defaultTextColor = defaultTextColor;
+        /* JCM 2.x's LCDPIDSRenderer carries its own literals, so a scripted preset lands where its
+           author put it. The base class defaults are the RV set, which is why these exist. */
+        setScriptPanelProfile(-0.19F, -0.125F, -0.130F, 133, 72);
     }
 
     @Override
@@ -108,6 +107,15 @@ public class RenderLCDPIDS<T extends BlockEntityMapper> extends RenderPIDSBase<T
             final MultiBufferSource.BufferSource immediate = MultiBufferSource.immediate(Tesselator.getInstance().getBuilder());
             final List<ScheduleEntry> scheduleList = new ArrayList<>();
 
+            /* A preset with a script paints the whole panel itself against JCM 2.x's canvas for
+               this PIDS type, so the built-in path is skipped; its placement is JCM 2.x's own
+               literals from the block centre. A script that is missing or will not parse paints
+               nothing, and the built-in panel is drawn instead.
+               See RenderPIDSBase#renderScriptPanel. */
+            if (pidsPreset.hasScript() && renderScriptPanel(matrices, vertexConsumers, immediate, textRenderer, entity, world, facing, pidsPreset, PIDS_TYPE, customMessages, hideArrivals, !showPlatforms, filteredPlatformIds, rotate90)) {
+                return;
+            }
+
             matrices.pushPose();
             matrices.translate(0.5, 0, 0.5);
             UtilitiesClient.rotateYDegrees(matrices, (rotate90 ? 90 : 0) - facing.toYRot());
@@ -122,25 +130,6 @@ public class RenderLCDPIDS<T extends BlockEntityMapper> extends RenderPIDSBase<T
                 matrices.translate(0, -1F, 0.01);
                 drawTexture(matrices, vertexConsumerPIDSBG, startX - 21F / 2, -1.5F, BACKGROUND_WIDTH, BACKGROUND_HEIGHT, facing, ARGB_WHITE, MAX_LIGHT_GLOWING);
                 matrices.popPose();
-            }
-
-            /* Script presets draw their whole content themselves (JCM 2.3's ScriptPIDSPreset) */
-            if (pidsPreset.hasScript()) {
-                /* The script canvas is mapped onto the background rectangle, so that a script written
-                   for the JCM 2.3 canvas size lines up with the screen texture. */
-                final float scriptWidth = pidsPreset.scriptWidth == null ? SCRIPT_CANVAS_WIDTH : pidsPreset.scriptWidth;
-                final float scriptHeight = pidsPreset.scriptHeight == null ? SCRIPT_CANVAS_HEIGHT : pidsPreset.scriptHeight;
-                final float scriptScaleX = BACKGROUND_WIDTH / scriptWidth;
-                final float scriptScaleY = BACKGROUND_HEIGHT / scriptHeight;
-
-                matrices.pushPose();
-                matrices.translate(startX - 21F / 2, -1.5F - 1F, 0.02);
-                matrices.scale(scriptScaleX, scriptScaleY, 1);
-                PIDSScriptRenderer.render(matrices, vertexConsumers, immediate, textRenderer, facing, light, entity, pidsPreset, PIDS_TYPE, customMessages, hideArrivals, filteredPlatformIds,
-                        scriptWidth, scriptHeight, !showPlatforms, scale);
-                matrices.popPose();
-                matrices.popPose();
-                return;
             }
 
             matrices.popPose();
@@ -181,12 +170,15 @@ public class RenderLCDPIDS<T extends BlockEntityMapper> extends RenderPIDSBase<T
 
             /* Loop through each arrival */
             for (int i = 0; i < maxArrivals; i++) {
+                /* A hidden row renders nothing at all (not even a custom message) and does not consume an arrival */
+                if (hideArrivals[i]) continue;
+
                 final String destinationString;
                 final boolean useCustomMessage;
                 final ScheduleEntry currentSchedule = entryIndex < scheduleList.size() ? scheduleList.get(entryIndex) : null;
                 final Route route = currentSchedule == null ? null : ClientData.DATA_CACHE.routeIdMap.get(currentSchedule.routeId);
 
-                if (entryIndex < scheduleList.size() && !hideArrivals[i] && route != null) {
+                if (entryIndex < scheduleList.size() && route != null) {
                     final String[] destinationSplit = ClientData.DATA_CACHE.getFormattedRouteDestination(route, currentSchedule.currentStationIndex, "").split("\\|");
                     final boolean isLightRailRoute = route.isLightRailRoute;
                     final String[] routeNumberSplit = route.lightRailRouteNumber.split("\\|");
@@ -258,7 +250,6 @@ public class RenderLCDPIDS<T extends BlockEntityMapper> extends RenderPIDSBase<T
                     }
                 }
                 matrices.popPose();
-                if(hideArrivals[i]) continue;
                 if(useCustomMessage && pidsPreset.customTextPushArrival) continue;
                 entryIndex++;
             }

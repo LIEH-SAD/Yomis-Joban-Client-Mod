@@ -47,9 +47,25 @@ public class ScriptResourceUtil {
         if (activeParsingScript == null) {
             throw new RuntimeException("Cannot use include() in the runtime stage, all scripts have already been parsed at this point!");
         }
-        final ResourceLocation identifier = pathOrIdentifier instanceof ResourceLocation ? (ResourceLocation) pathOrIdentifier : idr(pathOrIdentifier.toString());
+        ResourceLocation identifier;
+        if (pathOrIdentifier instanceof ResourceLocation) {
+            identifier = Scripting.resolveScriptFile(Scripting.caseFold((ResourceLocation) pathOrIdentifier));
+        } else {
+            identifier = resolveExisting(pathOrIdentifier.toString());
+            /* JCM 2.x resolves includes absolutely; scripts written for older builds of this mod may
+               use a path relative to the including file, so fall back to that spelling before giving up. */
+            if (!exist(identifier) && !scriptLocationStack.empty()) {
+                final ResourceLocation relative = idr(pathOrIdentifier.toString());
+                if (exist(relative)) identifier = relative;
+            }
+            /* A pack may write a folder that does not exist ("pids/scripts" for "pids/script");
+               the file name is enough to find it when the namespace holds exactly one of them. */
+            identifier = Scripting.resolveScriptFile(identifier);
+        }
         /* Including the same file twice in one script would execute its top-level declarations twice,
-           which Rhino rejects as a redeclaration. Upstream scripts never rely on that, so skip it. */
+           which Rhino rejects as a redeclaration. Upstream scripts never rely on that, so skip it.
+           The stack check catches a file that includes itself indirectly, which would recurse forever. */
+        if (scriptLocationStack.contains(identifier)) return;
         if (!includedScripts.add(identifier.toString())) return;
         final DataReaderJS scriptFile = read(identifier);
         if (scriptFile == null) throw new IllegalStateException(String.format("Failed to include script %s:%s as it is not found.", identifier.getNamespace(), identifier.getPath()));
@@ -61,8 +77,29 @@ public class ScriptResourceUtil {
         ConsoleJS.logRaw(objs);
     }
 
+    /**
+     * Build a resource location the lenient way scripts expect: capitals are folded and characters a
+     * {@link ResourceLocation} cannot hold are replaced, so {@code "jsblock:Texture/Gui.png"} resolves
+     * instead of throwing. JCM 2.x's {@code ScriptPaths} does the same.
+     */
+    public static ResourceLocation lenientLocation(String textForm) {
+        String text = textForm == null ? "" : textForm.trim().replace('\\', '/');
+        String namespace = "jsblock";
+        final int colon = text.indexOf(':');
+        if (colon >= 0) {
+            namespace = text.substring(0, colon);
+            text = text.substring(colon + 1);
+        }
+        return new ResourceLocation(sanitize(namespace, false), sanitize(text, true));
+    }
+
+    /** @return the location of an existing resource, tolerating the capitalisation a pack used on disk */
+    public static ResourceLocation resolveExisting(String textForm) {
+        return Scripting.caseFold(lenientLocation(textForm));
+    }
+
     public static ResourceLocation id(String textForm) {
-        return textForm.contains(":") ? new ResourceLocation(textForm) : new ResourceLocation("jsblock", textForm);
+        return lenientLocation(textForm);
     }
 
     public static ResourceLocation id(ResourceLocation id, String suffix) {
@@ -76,14 +113,15 @@ public class ScriptResourceUtil {
     }
 
     public static DataReaderJS read(String id) {
-        return read(id(id));
+        return read(resolveExisting(id));
     }
 
     public static DataReaderJS read(ResourceLocation id) {
-        final String idStr = id.getNamespace() + ":" + id.getPath();
+        final ResourceLocation resolved = Scripting.caseFold(id);
+        final String idStr = resolved.getNamespace() + ":" + resolved.getPath();
         return cacheOrGet(idStr, () -> {
             final byte[][] fileBytes = new byte[][]{null};
-            try (final InputStream stream = Scripting.readResource(id)) {
+            try (final InputStream stream = Scripting.readResource(resolved)) {
                 if (stream != null) {
                     fileBytes[0] = stream.readAllBytes();
                 }
@@ -95,11 +133,11 @@ public class ScriptResourceUtil {
     }
 
     public static boolean exist(String id) {
-        return exist(id(id));
+        return exist(resolveExisting(id));
     }
 
     public static boolean exist(ResourceLocation id) {
-        return Scripting.resourceExists(id);
+        return Scripting.resourceExists(Scripting.caseFold(id));
     }
 
     public static String readString(ResourceLocation id) {
@@ -116,13 +154,22 @@ public class ScriptResourceUtil {
     }
 
     private static ResourceLocation resolveRelativePath(ResourceLocation baseFile, String relative) {
-        String result = relative.toLowerCase(Locale.ROOT).replace('\\', '/');
-        if (result.contains(":")) {
-            result = result.replaceAll("[^a-z0-9/.:_-]", "_");
-            return new ResourceLocation(result);
-        }
-        result = result.replaceAll("[^a-z0-9/._-]", "_");
+        final String text = relative == null ? "" : relative.trim().replace('\\', '/');
+        if (text.contains(":")) return lenientLocation(text);
         final String parent = FileSystems.getDefault().getPath(baseFile.getPath()).getParent() == null ? "" : FileSystems.getDefault().getPath(baseFile.getPath()).getParent().toString();
-        return new ResourceLocation(baseFile.getNamespace(), FileSystems.getDefault().getPath(parent).resolve(result).normalize().toString().replace('\\', '/'));
+        final String combined = FileSystems.getDefault().getPath(parent).resolve(text.toLowerCase(Locale.ROOT)).normalize().toString().replace('\\', '/');
+        return Scripting.caseFold(new ResourceLocation(baseFile.getNamespace(), sanitize(combined, true)));
+    }
+
+    /** Replaces the characters a {@link ResourceLocation} cannot hold, so lenient input still parses. */
+    private static String sanitize(String text, boolean allowSlash) {
+        final StringBuilder out = new StringBuilder(text.length());
+        for (int i = 0; i < text.length(); i++) {
+            final char c = Character.toLowerCase(text.charAt(i));
+            final boolean valid = c >= 'a' && c <= 'z' || c >= '0' && c <= '9'
+                    || c == '.' || c == '_' || c == '-' || allowSlash && c == '/';
+            out.append(valid ? c : '_');
+        }
+        return out.toString();
     }
 }

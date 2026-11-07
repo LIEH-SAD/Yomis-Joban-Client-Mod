@@ -16,6 +16,13 @@ import java.util.List;
  * @author LX86 (JCM)
  */
 public class ArrivalWrapper {
+    /**
+     * The stand-in handed out for a row with no train, once a preset has shown it reads past the end
+     * of the list without checking. Its arrival time is "now", so a preset computing a countdown
+     * reads it as arriving immediately rather than as a train that left hours ago.
+     */
+    private static final ArrivalWrapper ABSENT = new ArrivalWrapper();
+
     private final ScheduleEntry scheduleEntry;
     private final long platformId;
     private final Route route;
@@ -24,6 +31,17 @@ public class ArrivalWrapper {
         this.scheduleEntry = scheduleEntry;
         this.platformId = platformId;
         this.route = ClientData.DATA_CACHE.routeIdMap.get(scheduleEntry.routeId);
+    }
+
+    private ArrivalWrapper() {
+        this.scheduleEntry = null;
+        this.platformId = 0;
+        this.route = null;
+    }
+
+    /** @return the placeholder for an empty row; see {@link ArrivalsWrapper} */
+    public static ArrivalWrapper absent() {
+        return ABSENT;
     }
 
     public String destination() {
@@ -36,7 +54,7 @@ public class ArrivalWrapper {
     }
 
     public long arrivalTime() {
-        return scheduleEntry.arrivalMillis;
+        return scheduleEntry == null ? System.currentTimeMillis() : scheduleEntry.arrivalMillis;
     }
 
     public boolean arrived() {
@@ -54,15 +72,35 @@ public class ArrivalWrapper {
     }
 
     public int stationIndex() {
-        return scheduleEntry.currentStationIndex;
+        return scheduleEntry == null ? 0 : scheduleEntry.currentStationIndex;
+    }
+
+    /** JCM 2.x's name for {@link #stationIndex()}. */
+    public int currentStationIndex() {
+        return stationIndex();
+    }
+
+    /** The route type as its enum name ({@code NORMAL}, {@code LIGHT_RAIL} or {@code HIGH_SPEED}). */
+    public String routeType() {
+        return route == null || route.routeType == null ? "NORMAL" : route.routeType.name();
+    }
+
+    /** Whether MTR marks the route of this arrival as light rail. */
+    public boolean isLightRailRoute() {
+        return route != null && route.isLightRailRoute;
+    }
+
+    /** Whether the train has already departed, which MTR 3.x does not track; always {@code false}. */
+    public boolean departed() {
+        return false;
     }
 
     public boolean terminating() {
-        return route != null && scheduleEntry.currentStationIndex >= route.platformIds.size() - 1;
+        return route != null && stationIndex() >= route.platformIds.size() - 1;
     }
 
     public long routeId() {
-        return scheduleEntry.routeId;
+        return scheduleEntry == null ? 0 : scheduleEntry.routeId;
     }
 
     public String routeName() {
@@ -82,11 +120,19 @@ public class ArrivalWrapper {
     }
 
     /**
-     * The circular state of the arrival's route as its enum name ({@code NONE}, {@code CLOCKWISE}
-     * or {@code ANTICLOCKWISE}), so that no MTR type has to be exposed to scripts.
+     * The circular state of the arrival's route as a string, so that no MTR type has to be exposed to
+     * scripts.<br>
+     * MTR 3.x spells the anticlockwise case {@code ANTICLOCKWISE} while JCM 2.x uses
+     * {@code ANTI_CLOCKWISE}; the JCM 2.x spelling is returned so presets written against it keep
+     * matching, and {@code CLOCKWISE} is unchanged.
      */
     public String circularState() {
-        return (route == null ? Route.CircularState.NONE : route.circularState).name();
+        if (route == null || route.circularState == null) return "NONE";
+        return switch (route.circularState) {
+            case CLOCKWISE -> "CLOCKWISE";
+            case ANTICLOCKWISE -> "ANTI_CLOCKWISE";
+            case NONE -> "NONE";
+        };
     }
 
     public long platformId() {
@@ -99,7 +145,7 @@ public class ArrivalWrapper {
     }
 
     public int carCount() {
-        return scheduleEntry.trainCars;
+        return scheduleEntry == null ? 0 : scheduleEntry.trainCars;
     }
 
     /**

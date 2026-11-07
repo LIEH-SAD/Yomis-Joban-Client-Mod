@@ -25,6 +25,7 @@ public abstract class ParsedScript {
     protected final double rateLimit;
     protected Exception capturedScriptException = null;
     protected long lastFailedTime = -1;
+    private volatile boolean lenientArrivals = false;
 
     public ParsedScript(ScriptManager scriptManager, String displayName, String contextName, Configuration scriptConfiguration) {
         this.displayName = displayName;
@@ -43,6 +44,26 @@ public abstract class ParsedScript {
 
     public Exception getCapturedScriptException() {
         return capturedScriptException;
+    }
+
+    /**
+     * Whether this script is drawn with placeholder arrivals, so {@code pids.arrivals().get(i)}
+     * returns an empty arrival past the end of the list instead of {@code null}.<br>
+     * Set once, the first time a script throws while reading an arrival it never checked, and kept
+     * for the lifetime of the script: a pack that indexes past the end does it every frame.
+     */
+    public boolean usesLenientArrivals() {
+        return lenientArrivals;
+    }
+
+    /**
+     * @return {@code true} for the call that switched it on, so the caller retries the frame once
+     * instead of once per frame
+     */
+    public boolean adoptLenientArrivals() {
+        if (lenientArrivals) return false;
+        lenientArrivals = true;
+        return true;
     }
 
     public String getDisplayName() {

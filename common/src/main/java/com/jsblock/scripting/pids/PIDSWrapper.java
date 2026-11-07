@@ -25,16 +25,35 @@ public class PIDSWrapper {
     private final boolean platformNumberHidden;
 
     public PIDSWrapper(BlockEntityMapper blockEntity, String[] customMessages, boolean[] hiddenRows, List<Long> targetPlatformIds, float width, float height, String type, boolean autoDetectedPlatforms, boolean platformNumberHidden) {
+        this(blockEntity, customMessages, hiddenRows, targetPlatformIds, width, height, type, autoDetectedPlatforms, platformNumberHidden,
+                ArrivalsWrapper.fromPlatformIds(targetPlatformIds, blockEntity == null ? null : blockEntity.getBlockPos()));
+    }
+
+    private PIDSWrapper(BlockEntityMapper blockEntity, String[] customMessages, boolean[] hiddenRows, List<Long> targetPlatformIds, float width, float height, String type, boolean autoDetectedPlatforms, boolean platformNumberHidden, ArrivalsWrapper arrivals) {
         this.blockEntity = blockEntity;
         this.customMessages = customMessages == null ? new String[0] : customMessages;
         this.hiddenRows = hiddenRows == null ? new boolean[0] : hiddenRows;
         this.targetPlatformIds = targetPlatformIds;
-        this.arrivals = ArrivalsWrapper.fromPlatformIds(targetPlatformIds, blockEntity == null ? null : blockEntity.getBlockPos());
+        this.arrivals = arrivals;
         this.width = width;
         this.height = height;
         this.type = type == null ? "pids" : type;
         this.autoDetectedPlatforms = autoDetectedPlatforms;
         this.platformNumberHidden = platformNumberHidden;
+    }
+
+    /**
+     * @return the same panel with {@code arrivals().get(i)} handing out a placeholder past the end
+     * instead of {@code null}; {@code this} when already lenient
+     */
+    public PIDSWrapper withLenientArrivals() {
+        if (isLenientArrivals()) return this;
+        return new PIDSWrapper(blockEntity, customMessages, hiddenRows, targetPlatformIds, width, height, type, autoDetectedPlatforms, platformNumberHidden, arrivals.withLenient());
+    }
+
+    /** @return whether {@code arrivals().get(i)} answers with a placeholder rather than {@code null} */
+    public boolean isLenientArrivals() {
+        return arrivals != null && arrivals.isLenient();
     }
 
     /** The PIDS type, e.g. {@code lcd_pids}, {@code rv_pids}, {@code rv_pids_sil_1} or {@code rv_pids_sil_2}. */
@@ -54,8 +73,28 @@ public class PIDSWrapper {
         return Math.round(height);
     }
 
-    public List<Long> getTargetPlatformIds() {
-        return targetPlatformIds;
+    /**
+     * The platform ids this PIDS serves; empty when the block auto-detects its platform.<br>
+     * JCM 2.x hands scripts a plain array, so this returns one rather than a {@link List}: a preset
+     * reading {@code pids.getTargetPlatformIds().length} works, a list would end the script.
+     */
+    public long[] getTargetPlatformIds() {
+        return targetPlatformIds();
+    }
+
+    public long[] targetPlatformIds() {
+        if (targetPlatformIds == null) return new long[0];
+        final long[] ids = new long[targetPlatformIds.size()];
+        for (int i = 0; i < ids.length; i++) {
+            ids[i] = targetPlatformIds.get(i);
+        }
+        return ids;
+    }
+
+    /** The name of the station this PIDS belongs to; empty when the client does not know it. */
+    public String stationName() {
+        final StationWrapper station = station();
+        return station == null || station.name() == null ? "" : station.name();
     }
 
     /** The upcoming arrivals of this PIDS, for {@code pids.arrivals().get(i)}. */
@@ -64,7 +103,7 @@ public class PIDSWrapper {
     }
 
     public Vector3f blockPos() {
-        if (blockEntity == null) return Vector3f.ZERO;
+        if (blockEntity == null) return new Vector3f(0, 0, 0);
         final BlockPos pos = blockEntity.getBlockPos();
         return new Vector3f(pos.getX(), pos.getY(), pos.getZ());
     }

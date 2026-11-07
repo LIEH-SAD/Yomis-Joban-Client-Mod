@@ -29,13 +29,20 @@ public class ScriptRegistry {
         // Rhino throws "Access to Java class ... is prohibited" while wrapping the return value.
         classShutter.allowClass(
                 ClassRule.parse("net.minecraft.resources.ResourceLocation"),
-                ClassRule.parse("net.minecraft.core.BlockPos")
+                ClassRule.parse("net.minecraft.core.BlockPos"),
+                // MTRClientData hands scripts MTR's own cached data, so the value types it returns
+                // (Route, Station, Platform, DataCache) have to stay reachable.
+                ClassRule.parse("mtr.data.*"),
+                ClassRule.parse("mtr.client.ClientData")
         );
 
         scriptManager.parseScriptEvent.register((contextName, script) -> {
             if ("pids".equals(contextName)) {
                 script.exposeClass("Text", TextWrapper.class);
                 script.exposeClass("Texture", TextureWrapper.class);
+                /* JCM 2.x calls the draw call Rectangle; earlier builds of this mod called it Rect, so
+                   both names point at the same class and a pack written for either one still loads. */
+                script.exposeClass("Rectangle", RectangleWrapper.class);
                 script.exposeClass("Rect", RectangleWrapper.class);
                 script.exposeClass("Matrices", Matrices.class);
             }

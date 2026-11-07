@@ -16,9 +16,11 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
+import java.util.HashSet;
 import java.util.Set;
 
 import static com.jsblock.packet.IPacketJoban.PACKET_UPDATE_SOUND_LOOPER_CONFIG;
+import static mtr.data.SerializedDataBase.PACKET_STRING_READ_LENGTH;
 
 /**
  * This class is responsible for handling packets, that should be executed on the CLIENT side, e.g.
@@ -262,6 +264,74 @@ public class PacketClient {
                 }
             });
         }
+    }
+
+    public static void openPIDSProjectorScreenS2C(FriendlyByteBuf packet) {
+        final Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.level == null) return;
+
+        final BlockPos pos = packet.readBlockPos();
+        final int messageCount = packet.readInt();
+        final String[] messages = new String[messageCount];
+        for (int i = 0; i < messageCount; i++) {
+            messages[i] = packet.readUtf();
+        }
+        final int rowCount = packet.readInt();
+        final boolean[] rowHidden = new boolean[rowCount];
+        for (int i = 0; i < rowCount; i++) {
+            rowHidden[i] = packet.readBoolean();
+        }
+        final int platformIdCount = packet.readInt();
+        final Set<Long> platformIds = new HashSet<>();
+        for (int i = 0; i < platformIdCount; i++) {
+            platformIds.add(packet.readLong());
+        }
+        final boolean hidePlatformNumber = packet.readBoolean();
+        final String presetID = packet.readUtf();
+        final double offsetX = packet.readDouble();
+        final double offsetY = packet.readDouble();
+        final double offsetZ = packet.readDouble();
+        final double rotateX = packet.readDouble();
+        final double rotateY = packet.readDouble();
+        final double rotateZ = packet.readDouble();
+        final double scale = packet.readDouble();
+
+        if (minecraft.level.getBlockEntity(pos) instanceof PIDSProjector.TileEntityBlockPIDSProjector) {
+            minecraft.execute(() -> {
+                if (!(minecraft.screen instanceof PIDSProjectorScreen)) {
+                    UtilitiesClient.setScreen(minecraft, new PIDSProjectorScreen(pos, presetID, messages, rowHidden,
+                            hidePlatformNumber, platformIds, offsetX, offsetY, offsetZ, rotateX, rotateY, rotateZ, scale));
+                }
+            });
+        }
+    }
+
+    public static void sendPIDSProjectorC2S(BlockPos pos, String presetID, String[] messages, boolean[] hideArrival,
+                                            boolean hidePlatformNumber, Set<Long> filterPlatformIds,
+                                            double offsetX, double offsetY, double offsetZ,
+                                            double rotateX, double rotateY, double rotateZ, double scale) {
+        FriendlyByteBuf packet = new FriendlyByteBuf(Unpooled.buffer());
+        packet.writeBlockPos(pos);
+        packet.writeInt(messages.length);
+        for (String message : messages) {
+            packet.writeUtf(message == null ? "" : message);
+        }
+        packet.writeInt(hideArrival.length);
+        for (boolean hidden : hideArrival) {
+            packet.writeBoolean(hidden);
+        }
+        packet.writeInt(filterPlatformIds.size());
+        filterPlatformIds.forEach(packet::writeLong);
+        packet.writeBoolean(hidePlatformNumber);
+        packet.writeUtf(presetID == null ? "" : presetID, PACKET_STRING_READ_LENGTH);
+        packet.writeDouble(offsetX);
+        packet.writeDouble(offsetY);
+        packet.writeDouble(offsetZ);
+        packet.writeDouble(rotateX);
+        packet.writeDouble(rotateY);
+        packet.writeDouble(rotateZ);
+        packet.writeDouble(scale);
+        RegistryClient.sendToServer(IPacketJoban.PACKET_UPDATE_PIDS_PROJECTOR, packet);
     }
 
     public static void sendSoundLooperC2S(BlockPos pos, int categoryIndex, String soundId, int loopInterval,

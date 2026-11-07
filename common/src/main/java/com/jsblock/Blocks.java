@@ -51,6 +51,7 @@ public interface Blocks {
     RegistryObject<Block> MTR_STAIRS_1 = new RegistryObject<>(() -> new MTRStairs1(BlockBehaviour.Properties.of().requiresCorrectToolForDrops().strength(0.5f).noOcclusion()));
     RegistryObject<Block> PIDS_1A = new RegistryObject<>(PIDS1A::new);
     RegistryObject<Block> PIDS_LCD = new RegistryObject<>(PIDSLCD::new);
+    RegistryObject<Block> PIDS_PROJECTOR = new RegistryObject<>(PIDSProjector::new);
     RegistryObject<Block> PIDS_RV_TCL = new RegistryObject<>(PIDSRV::new);
     RegistryObject<Block> PIDS_RV_SIL_1 = new RegistryObject<>(PIDSRVSIL1::new);
     RegistryObject<Block> PIDS_RV_SIL_2 = new RegistryObject<>(PIDSRVSIL2::new);

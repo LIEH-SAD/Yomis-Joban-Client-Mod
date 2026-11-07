@@ -17,9 +17,28 @@ import java.util.Set;
  */
 public class ArrivalsWrapper {
     private final List<ArrivalWrapper> arrivals;
+    private final boolean lenient;
 
     public ArrivalsWrapper(List<ArrivalWrapper> arrivals) {
+        this(arrivals, false);
+    }
+
+    private ArrivalsWrapper(List<ArrivalWrapper> arrivals, boolean lenient) {
         this.arrivals = Collections.unmodifiableList(new ArrayList<>(arrivals));
+        this.lenient = lenient;
+    }
+
+    /**
+     * @return the same list with {@link #get(int)} handing out a placeholder past the end instead of
+     * {@code null}; {@code this} when already lenient
+     */
+    public ArrivalsWrapper withLenient() {
+        return lenient ? this : new ArrivalsWrapper(arrivals, true);
+    }
+
+    /** Whether {@link #get(int)} answers with a placeholder rather than {@code null} past the end. */
+    public boolean isLenient() {
+        return lenient;
     }
 
     /**
@@ -51,9 +70,15 @@ public class ArrivalsWrapper {
         return new ArrivalsWrapper(result);
     }
 
-    /** @return the i-th upcoming arrival, or {@code null} when out of range. */
+    /**
+     * @return the i-th upcoming arrival, or {@code null} when out of range -- unless this list is
+     * lenient, in which case an empty arrival is returned so a preset that indexes past the end
+     * without checking still draws instead of throwing (see
+     * {@link com.jsblock.scripting.primitive.ParsedScript#usesLenientArrivals()})
+     */
     public ArrivalWrapper get(int i) {
-        return i < 0 || i >= arrivals.size() ? null : arrivals.get(i);
+        if (i >= 0 && i < arrivals.size()) return arrivals.get(i);
+        return lenient ? ArrivalWrapper.absent() : null;
     }
 
     public int size() {
@@ -76,6 +101,30 @@ public class ArrivalsWrapper {
 
     public List<ArrivalWrapper> getAll() {
         return arrivals;
+    }
+
+    /**
+     * The arrivals as a JavaScript array, for the {@code arrivals.toArray()} call JCM 2.x documents.<br>
+     * A Java list has no {@code .length} and no {@code .map}, so the array is built inside the calling
+     * scope when one is available and falls back to a Java array otherwise.
+     */
+    public Object toArray() {
+        final Object[] items = arrivals.toArray();
+        try {
+            final com.jsblock.lib.org.mozilla.javascript.Context cx = com.jsblock.lib.org.mozilla.javascript.Context.getCurrentContext();
+            if (cx != null) {
+                final com.jsblock.lib.org.mozilla.javascript.Scriptable scope = com.jsblock.lib.org.mozilla.javascript.ScriptRuntime.getTopCallScope(cx);
+                final com.jsblock.lib.org.mozilla.javascript.NativeArray array =
+                        (com.jsblock.lib.org.mozilla.javascript.NativeArray) cx.newArray(scope, items.length);
+                for (int i = 0; i < items.length; i++) {
+                    array.put(i, array, items[i]);
+                }
+                return array;
+            }
+        } catch (Throwable ignored) {
+            /* Not on a script call stack: hand back the plain array, which scripts can still index. */
+        }
+        return items;
     }
 
     public List<Long> platformIds() {

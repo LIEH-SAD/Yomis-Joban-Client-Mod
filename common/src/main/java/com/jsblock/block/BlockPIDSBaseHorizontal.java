@@ -46,6 +46,14 @@ public abstract class BlockPIDSBaseHorizontal extends BlockDirectionalMapper imp
         super(Properties.of().mapColor(MapColor.COLOR_GRAY).requiresCorrectToolForDrops().strength(2).lightLevel(state -> 5));
     }
 
+    /**
+     * For the shapes that cannot use the defaults above.
+     * @see com.jsblock.block.PIDSProjector
+     */
+    protected BlockPIDSBaseHorizontal(Properties properties) {
+        super(properties);
+    }
+
     @Override
     public InteractionResult use(BlockState state, Level world, BlockPos pos, Player player, InteractionHand interactionHand, BlockHitResult blockHitResult) {
         return IBlock.checkHoldingBrush(world, player, () -> {

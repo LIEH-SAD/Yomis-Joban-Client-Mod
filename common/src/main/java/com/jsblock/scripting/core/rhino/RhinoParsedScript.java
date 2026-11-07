@@ -67,7 +67,11 @@ public class RhinoParsedScript extends ParsedScript {
                 Context.exit();
             }
         } catch (Exception e) {
+            /* A script that failed to parse has no functions at all: keeping it would hand the
+               renderer a preset that draws nothing and report success, which is how a broken pack
+               ends up looking like a preset that simply renders a blank panel. */
             scriptManager.getLogger().error("[YJCM Scripting] Failed to parse script " + displayName, e);
+            return null;
         }
         return this;
     }
@@ -76,9 +80,16 @@ public class RhinoParsedScript extends ParsedScript {
     public void parseScriptContent(String str, String source) {
         final Context cx = Context.getCurrentContext();
         if (cx == null) throw new IllegalStateException("No rhino context currently available!");
-        final Script script = compiledScriptCache.containsKey(source) ? compiledScriptCache.get(source) : cx.compileString(str, source, 1, null);
+        /* The cache key has to include the source text: several chunks of one preset (scriptInput,
+           scriptTexts, the legacy "script" key) and every reload reuse the same names, so keying on
+           the name alone hands back a compiled script whose body is no longer the one being parsed. */
+        final String cacheKey = source + '\u0000' + str.hashCode() + ':' + str.length();
+        Script script = compiledScriptCache.get(cacheKey);
+        if (script == null) {
+            script = cx.compileString(str, source, 1, null);
+            compiledScriptCache.put(cacheKey, script);
+        }
         script.exec(cx, scope);
-        compiledScriptCache.put(source, script);
     }
 
     @Override
@@ -124,13 +135,7 @@ public class RhinoParsedScript extends ParsedScript {
                     cx.setClassShutter(new MTRRhinoClassShutter(scriptManager.getClassShutter()));
                     timing.prepareForScript(scriptInstance);
                     scriptInstance.beginTrackExecuteTime();
-                    for (final Function func : functions) {
-                        func.call(cx, scope, scope, new Object[]{
-                                contextObject,
-                                scriptInstance.getOrCreateStateObject(() -> cx.newObject(scope)),
-                                scriptInstance.getWrapperObject()
-                        });
-                    }
+                    callFunctions(cx, scriptInstance, functions, contextObject);
                 } finally {
                     scriptInstance.endTrackExecuteTime();
                     Context.exit();
@@ -163,6 +168,65 @@ public class RhinoParsedScript extends ParsedScript {
                 }
             }
         });
+    }
+
+    /**
+     * Calls every function of {@code functions} with the three arguments JCM 2.x passes, retrying
+     * once with placeholder arrivals when the script threw while reading an arrival it never checked.
+     *
+     * <p>A PIDS preset cannot be edited from here, and the commonest way one breaks is
+     * {@code pids.arrivals().get(1).arrivalTime()} on a platform with a single train: JCM 2.x returns
+     * {@code null} there and the whole {@code render()} dies, leaving the panel showing only whatever
+     * was drawn before the throw -- usually its background. A board showing a placeholder row beats a
+     * board showing nothing, so the choice is made once per script and kept.</p>
+     */
+    private void callFunctions(Context cx, ScriptInstance<?> scriptInstance, List<Function> functions, Object contextObject) {
+        boolean retried = false;
+        while (true) {
+            try {
+                for (final Function func : functions) {
+                    func.call(cx, scope, scope, new Object[]{
+                            contextObject,
+                            scriptInstance.getOrCreateStateObject(() -> cx.newObject(scope)),
+                            scriptInstance.getWrapperObject()
+                    });
+                }
+                return;
+            } catch (RuntimeException e) {
+                if (retried || !adoptLenientArrivals(scriptInstance, e)) throw e;
+                retried = true;
+                /* The first attempt may already have queued draw calls; replaying them on top of the
+                   retry would draw every label twice. */
+                scriptInstance.getContextObject().resetForNextRun();
+            }
+        }
+    }
+
+    /**
+     * Switches the script to placeholder arrivals if -- and only if -- the throw looks like an
+     * unguarded {@code arrivals().get(i)}: a null dereference while it has a PIDS wrapper in hand.
+     *
+     * @return {@code true} when the caller should retry, which can only happen once per script
+     */
+    @SuppressWarnings("unchecked")
+    private boolean adoptLenientArrivals(ScriptInstance<?> scriptInstance, Exception error) {
+        if (!mentionsNull(error)) return false;
+        final Object wrapper = scriptInstance.getWrapperObject();
+        if (!(wrapper instanceof com.jsblock.scripting.pids.PIDSWrapper)) return false;
+        final com.jsblock.scripting.pids.PIDSWrapper pidsWrapper = (com.jsblock.scripting.pids.PIDSWrapper) wrapper;
+        if (pidsWrapper.isLenientArrivals() || !adoptLenientArrivals()) return false;
+
+        /* The wrapper type parameter is the caller's; a PIDS script only ever carries a PIDSWrapper. */
+        ((ScriptInstance<com.jsblock.scripting.pids.PIDSWrapper>) scriptInstance).setWrapperObject(pidsWrapper.withLenientArrivals());
+        scriptManager.getLogger().warn("[YJCM Scripting] {} reads arrivals().get(i) past the end of the list"
+                + " without checking for null, which is what JCM 2.x returns there. It is now drawn with a"
+                + " placeholder arrival so the panel is not left blank; the preset should test for null.", displayName);
+        return true;
+    }
+
+    private static boolean mentionsNull(Throwable error) {
+        final String message = error == null ? null : error.getMessage();
+        return message != null && message.toLowerCase(java.util.Locale.ROOT).contains("null");
     }
 
     private void tryAndAddFunction(String name, List<Function> listToAdd) {

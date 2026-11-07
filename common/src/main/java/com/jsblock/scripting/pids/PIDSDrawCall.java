@@ -114,6 +114,20 @@ public abstract class PIDSDrawCall<T extends PIDSDrawCall<T>> {
 
     public abstract void render(PoseStack matrices, MultiBufferSource vertexConsumers, MultiBufferSource.BufferSource immediate, Font font, Direction facing, int light);
 
+    /**
+     * Makes a draw call's colour opaque, which is what every JCM 2.x wrapper does to it.
+     *
+     * <p>A preset writes a plain RGB literal -- {@code .color(0xFFFFFF)} for white,
+     * {@code .color(0x009944)} for a route colour -- and JCM 2.x draws both through
+     * {@code ARGB_BLACK + color}. MTR's {@code IDrawing.drawTexture} takes the alpha straight
+     * from {@code color >> 24} and does not add one, so without this the quad is fully
+     * transparent and simply vanishes, while the text drawn over it still shows because
+     * vanilla's font renderer forces opaque on its own.</p>
+     */
+    protected static int opaque(int color) {
+        return color | IGui.ARGB_BLACK;
+    }
+
     protected static int resolveLight(boolean naturalLight, int light) {
         return naturalLight ? light : IGui.MAX_LIGHT_GLOWING;
     }
