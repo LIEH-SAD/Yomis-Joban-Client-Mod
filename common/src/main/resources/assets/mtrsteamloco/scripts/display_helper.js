@@ -1,4 +1,4 @@
-// 克隆于 JCM 仓库，未验证可行
+
 function DisplayHelper(cfg) {
     if (cfg === void 0) return;
 
@@ -8,7 +8,7 @@ function DisplayHelper(cfg) {
     if (cfg.version === 1) {
         let renderType = cfg.renderType || "interior";
         let meshBuilder = new RawMeshBuilder(4, renderType, Resources.id("minecraft:textures/misc/white.png"));
-//        meshBuilder.color(255, 255, 255, 255);
+        meshBuilder.color(255, 255, 255, 255);
         for (let slotCfg of cfg.slots) {
             let realUV = Array(4);
             realUV[0] = [slotCfg.texArea[0] / cfg.texSize[0],
@@ -37,7 +37,7 @@ function DisplayHelper(cfg) {
         let rawModel = new RawModel();
         rawModel.append(meshBuilder.getMesh());
         rawModel.triangulate();
-        this.baseModel = ModelManager.upload(rawModel);
+        this.baseModel = ModelManager.uploadVertArrays(rawModel);
     } else {
         throw new Error("Unknown version: " + cfg.version);
     }
