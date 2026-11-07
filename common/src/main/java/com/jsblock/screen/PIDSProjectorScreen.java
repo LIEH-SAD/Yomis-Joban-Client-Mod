@@ -1,251 +1,201 @@
 package com.jsblock.screen;
 
-import com.jsblock.client.JobanCustomResources;
+import com.jsblock.amberui.gui.widget.ListViewWidget;
+import com.jsblock.amberui.gui.widget.MappedWidget;
+import com.jsblock.amberui.gui.widget.WidgetSet;
+import com.jsblock.block.PIDSProjector;
 import com.jsblock.packet.PacketClient;
-import mtr.client.IDrawing;
-import mtr.data.IGui;
-import mtr.mappings.ScreenMapper;
 import mtr.mappings.Text;
-import mtr.screen.PIDSConfigScreen;
-import mtr.screen.WidgetBetterCheckbox;
 import mtr.screen.WidgetBetterTextField;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 /**
- * PIDS Projector configuration: the preset it draws, the platforms it draws for, and where it draws
- * them.
+ * Configuration of the PIDS Projector, on the same AmberUI list as the other PIDS screens.
  *
- * <p>A projector has no companion block, so it cannot use the mod's usual two-block PIDS screen;
- * this one carries the projector's own placement fields (offset, rotation, scale) next to the parts
- * of the ordinary PIDS screen it can use -- the preset, the platform filter, the custom messages
- * and the hidden rows. Everything is sent to the server when the screen closes, like the other
- * configuration screens in the mod.</p>
+ * <p>A projector has no companion block, so it cannot reuse the two-block PIDS screen; it shares
+ * everything that screen offers that a projector can use -- the preset, the platform filter, the
+ * custom messages and the hidden rows -- and adds its own placement entries (offset, rotation,
+ * scale) above them. Everything is sent to the server when the screen is saved.</p>
+ *
+ * <p>Unlike the other PIDS screens, typing here moves the real panel on this client as it is typed,
+ * so a placement can be judged before it is saved; discarding puts the panel back.</p>
  */
-public class PIDSProjectorScreen extends ScreenMapper implements IGui {
-
-	private final BlockPos pos;
-	private final WidgetSuggestionTextField textBoxPreset;
-	/** offset x/y/z, then rotation x/y/z, then scale. */
-	private final WidgetBetterTextField[] fields = new WidgetBetterTextField[7];
-	private final WidgetBetterTextField[] textFieldMessages;
-	private final WidgetBetterCheckbox[] buttonsRowHidden;
-	private final WidgetBetterCheckbox hidePlatformCheckbox;
-	private final boolean[] initialRowHidden;
-	private final String[] initialMessages;
-	private final int maxArrivals;
-	private final Component messageText = Text.translatable("gui.mtr.pids_message");
-	private final Component rowHiddenText = Text.translatable("gui.jsblock.pids.listview.widget.row_hidden");
-	private final Component hidePlatformText = Text.translatable("gui.jsblock.hide_platform_number");
-
-	/** MTR's own pair for picking platforms, reused so this screen filters exactly like the others. */
-	private final WidgetBetterCheckbox selectAllCheckbox;
-	private final Button filterButton;
-	private final Set<Long> filterPlatformIds = new HashSet<>();
-	/** The count last written on the filter button, so it is only rebuilt when it actually changes. */
-	private int lastFilteredCount = -1;
-
-	private final String initialPresetID;
-	private final double[] initialValues;
-
+public class PIDSProjectorScreen extends PIDSBlockConfigScreen {
+	/** Offset X, offset Y, offset Z, rotation X, rotation Y, rotation Z, scale. */
 	private static final double[] DEFAULTS = {0, 0, 0, 0, 0, 0, 1};
-	private static final int MESSAGE_MAX_LENGTH = 100;
-	private static final int COLUMN_WIDTH = 58;
-	private static final int COLUMN_GAP = 4;
-	private static final int WIDE_FIELD_WIDTH = COLUMN_WIDTH * 3 + COLUMN_GAP * 2;
-	private static final int TEXT_PADDING = 16;
-	private static final int FINAL_TEXT_HEIGHT = TEXT_HEIGHT + TEXT_PADDING;
-	/** The row the message label is drawn on; a field's row, since the fields start there. */
-	private int messageLabelRow = -1;
+	/** Wide enough for three values side by side with a little room to type. */
+	private static final int FIELD_SET_WIDTH = 140;
+	private static final int FIELD_MAX_LENGTH = 16;
+	/** The scale is the only field on its row, so it is sized on its own. */
+	private static final int SCALE_INDEX = 6;
+	private static final int SCALE_FIELD_WIDTH = 60;
+
+	private final WidgetBetterTextField[] transformFields = new WidgetBetterTextField[DEFAULTS.length];
+	private final WidgetSet positionWidgetSet = new WidgetSet(20, 0);
+	private final WidgetSet rotationWidgetSet = new WidgetSet(20, 0);
+	/** What the screen opened with, so an unreadable field falls back to the block's own value. */
+	private final double[] initialValues = DEFAULTS.clone();
+	/** What the client's panel is showing right now, so a half-typed box does not snap it around. */
+	private final double[] previewed = DEFAULTS.clone();
 
 	public PIDSProjectorScreen(BlockPos pos, String presetID, String[] messages, boolean[] rowHidden,
 							   boolean hidePlatformNumber, Set<Long> platformIds,
 							   double offsetX, double offsetY, double offsetZ,
 							   double rotateX, double rotateY, double rotateZ, double scale) {
-		super(Text.literal(""));
-		this.pos = pos;
+		super(pos, PIDSProjector.TileEntityBlockPIDSProjector.MAX_ARRIVALS, true, presetID, hidePlatformNumber,
+				messages, rowHidden, platformIds);
 
-		this.maxArrivals = messages == null || messages.length == 0 ? 4 : messages.length;
-		this.initialMessages = new String[this.maxArrivals];
-		this.initialRowHidden = new boolean[this.maxArrivals];
-		this.textFieldMessages = new WidgetBetterTextField[this.maxArrivals];
-		this.buttonsRowHidden = new WidgetBetterCheckbox[this.maxArrivals];
-		for (int i = 0; i < this.maxArrivals; i++) {
-			this.initialMessages[i] = messages != null && i < messages.length && messages[i] != null ? messages[i] : "";
-			this.initialRowHidden[i] = rowHidden != null && i < rowHidden.length && rowHidden[i];
-			this.textFieldMessages[i] = new WidgetBetterTextField("", MESSAGE_MAX_LENGTH);
-			this.buttonsRowHidden[i] = new WidgetBetterCheckbox(0, 0, SQUARE_SIZE, SQUARE_SIZE, rowHiddenText, checked -> {
-			});
+		initialValues[0] = offsetX;
+		initialValues[1] = offsetY;
+		initialValues[2] = offsetZ;
+		initialValues[3] = rotateX;
+		initialValues[4] = rotateY;
+		initialValues[5] = rotateZ;
+		initialValues[SCALE_INDEX] = scale <= 0 ? DEFAULTS[SCALE_INDEX] : scale;
+
+		for (int i = 0; i < transformFields.length; i++) {
+			transformFields[i] = TextFields.setValue(new WidgetBetterTextField("", FIELD_MAX_LENGTH), format(initialValues[i]));
 		}
 
-		this.hidePlatformCheckbox = new WidgetBetterCheckbox(0, 0, SQUARE_SIZE, SQUARE_SIZE, hidePlatformText, checked -> {
-		});
-		this.hidePlatformCheckbox.setChecked(hidePlatformNumber);
+		/* The scale sits on its own, so it needs a width of its own: a text field is built zero wide. */
+		transformFields[SCALE_INDEX].setWidth(SCALE_FIELD_WIDTH);
 
-		final List<String> presetIds = new ArrayList<>(JobanCustomResources.getPresetIds());
-		presetIds.sort(String::compareTo);
-		this.initialPresetID = presetID == null ? "" : presetID;
-		this.textBoxPreset = new WidgetSuggestionTextField(initialPresetID, presetIds, 128, false);
+		/* Filled here rather than in addConfigEntries, which runs again whenever the screen is
+		   resized and would otherwise stack the fields up in the same row twice. */
+		positionWidgetSet.addWidget(transformFields[0]);
+		positionWidgetSet.addWidget(transformFields[1]);
+		positionWidgetSet.addWidget(transformFields[2]);
 
-		this.initialValues = new double[] {offsetX, offsetY, offsetZ, rotateX, rotateY, rotateZ, scale};
-		for (int i = 0; i < fields.length; i++) {
-			/* The value is passed as the widget's default: setValue alone does not make the text
-			   appear, and the boxes would stay blank until clicked. */
-			fields[i] = new WidgetBetterTextField(format(initialValues[i]), 16);
+		rotationWidgetSet.addWidget(transformFields[3]);
+		rotationWidgetSet.addWidget(transformFields[4]);
+		rotationWidgetSet.addWidget(transformFields[5]);
+
+		System.arraycopy(initialValues, 0, previewed, 0, previewed.length);
+
+		/* Attached after the boxes are seeded, because setting a value notifies the responder. */
+		for (WidgetBetterTextField transformField : transformFields) {
+			transformField.setResponder(value -> previewFromFields());
 		}
-
-		if (platformIds != null) {
-			filterPlatformIds.addAll(platformIds);
-		}
-		this.selectAllCheckbox = new WidgetBetterCheckbox(0, 0, SQUARE_SIZE, SQUARE_SIZE,
-				Text.translatable("gui.mtr.automatically_detect_nearby_platform"), checked -> {
-		});
-		this.selectAllCheckbox.setChecked(filterPlatformIds.isEmpty());
-		this.filterButton = PIDSConfigScreen.getPlatformFilterButton(pos, selectAllCheckbox, filterPlatformIds, this);
 	}
 
+	@Override
+	public Component getScreenTitle() {
+		return Text.translatable("gui.jsblock.pids_projector");
+	}
+
+	@Override
+	public void addConfigEntries(ListViewWidget listViewWidget) {
+		listViewWidget.addCategory(Text.translatable("gui.jsblock.pids.listview.category.projection"));
+
+		/* Registered with the screen so the boxes can be typed into; the list entry below draws
+		   them through their widget set. */
+		for (WidgetBetterTextField transformField : transformFields) {
+			addWidget(transformField);
+		}
+
+		positionWidgetSet.setXYSize(0, 0, FIELD_SET_WIDTH, 20);
+		listViewWidget.add(Text.translatable("gui.jsblock.pids_projector.offset"), new MappedWidget(positionWidgetSet));
+
+		rotationWidgetSet.setXYSize(0, 0, FIELD_SET_WIDTH, 20);
+		listViewWidget.add(Text.translatable("gui.jsblock.pids_projector.rotate"), new MappedWidget(rotationWidgetSet));
+
+		listViewWidget.add(Text.translatable("gui.jsblock.pids_projector.scale"), new MappedWidget(transformFields[SCALE_INDEX]));
+
+		listViewWidget.addCategory(Text.translatable("gui.jsblock.pids.listview.category.pids"));
+		super.addConfigEntries(listViewWidget);
+	}
+
+	@Override
+	public void tick() {
+		super.tick();
+
+		for (WidgetBetterTextField transformField : transformFields) {
+			transformField.tick();
+		}
+	}
+
+	@Override
+	protected void onSave() {
+		final double[] values = new double[transformFields.length];
+
+		for (int i = 0; i < values.length; i++) {
+			values[i] = parse(transformFields[i], initialValues[i]);
+		}
+
+		if (values[SCALE_INDEX] <= 0) {
+			values[SCALE_INDEX] = DEFAULTS[SCALE_INDEX];
+		}
+
+		PacketClient.sendPIDSProjectorC2S(pos1, presetId == null ? "" : presetId, collectCustomMessages(),
+				collectRowHidden(), isHidePlatformNumberSelected(), collectFilteredPlatforms(),
+				values[0], values[1], values[2], values[3], values[4], values[5], values[6]);
+
+		/* What the server was told is what the panel should show until its sync comes back. */
+		System.arraycopy(values, 0, previewed, 0, previewed.length);
+		applyPreview();
+	}
+
+	@Override
+	protected void onDiscard() {
+		/* The panel moved while the player typed, so put it back where the screen found it. */
+		System.arraycopy(initialValues, 0, previewed, 0, previewed.length);
+		applyPreview();
+	}
+
+	/** Reads the boxes into {@link #previewed}, keeping the last readable value of a box being typed in. */
+	private void previewFromFields() {
+		for (int i = 0; i < previewed.length; i++) {
+			/* An unreadable box is one being typed in, such as a lone minus sign: keep what it had. */
+			previewed[i] = parse(transformFields[i], previewed[i]);
+		}
+
+		if (previewed[SCALE_INDEX] <= 0) {
+			previewed[SCALE_INDEX] = DEFAULTS[SCALE_INDEX];
+		}
+
+		applyPreview();
+	}
+
+	/**
+	 * Moves the projector's own panel on this client, which its renderer reads every frame.
+	 *
+	 * <p>The block entity's setter is safe to call from a screen: its data sync only does anything in
+	 * a server level, so this redraws and nothing more. The server hears about the placement when the
+	 * screen is saved.</p>
+	 */
+	private void applyPreview() {
+		final Level level = Minecraft.getInstance().level;
+
+		if (level == null) {
+			return;
+		}
+
+		final BlockEntity blockEntity = level.getBlockEntity(pos1);
+
+		if (!(blockEntity instanceof PIDSProjector.TileEntityBlockPIDSProjector)) {
+			return;
+		}
+
+		((PIDSProjector.TileEntityBlockPIDSProjector) blockEntity).setProjectorTransform(previewed[0], previewed[1],
+				previewed[2], previewed[3], previewed[4], previewed[5], previewed[SCALE_INDEX]);
+	}
+
+	/** Renders a whole number without a trailing {@code .0}, which is how a player would type it. */
 	private static String format(double value) {
-		return value == Math.floor(value) ? String.valueOf((long) value) : String.valueOf(value);
+		return value == Math.floor(value) && !Double.isInfinite(value) ? String.valueOf((long) value) : String.valueOf(value);
 	}
 
 	private static double parse(WidgetBetterTextField field, double fallback) {
 		try {
 			return Double.parseDouble(field.getValue().trim());
-		} catch (Exception e) {
+		} catch (NumberFormatException e) {
 			return fallback;
 		}
-	}
-
-	/** The left edge of column {@code index} of a three-column row, counted from the right. */
-	private int columnX(int index) {
-		return width - SQUARE_SIZE - WIDE_FIELD_WIDTH + index * (COLUMN_WIDTH + COLUMN_GAP);
-	}
-
-	@Override
-	protected void init() {
-		super.init();
-		int row = 1;
-
-		/* Values first, then position and add: setting them here rather than in the constructor is
-		   what makes the text appear without the box having to be clicked. */
-		textBoxPreset.setValue(initialPresetID);
-		for (int i = 0; i < fields.length; i++) {
-			fields[i].setValue(format(initialValues[i]));
-		}
-
-		IDrawing.setPositionAndWidth(textBoxPreset, width - SQUARE_SIZE - WIDE_FIELD_WIDTH,
-				FINAL_TEXT_HEIGHT * row + SQUARE_SIZE, WIDE_FIELD_WIDTH);
-		addDrawableChild(textBoxPreset);
-		row++;
-
-		/* Offset and rotation are three values each, so they get three columns of their own; the
-		   scale is the seventh field and starts a row of its own. */
-		for (int i = 0; i < fields.length; i++) {
-			final int column = i % 3;
-			IDrawing.setPositionAndWidth(fields[i], columnX(column), FINAL_TEXT_HEIGHT * row + SQUARE_SIZE, COLUMN_WIDTH);
-			addDrawableChild(fields[i]);
-			if (column == 2) {
-				row++;
-			}
-		}
-
-		row += 2;
-		IDrawing.setPositionAndWidth(selectAllCheckbox, SQUARE_SIZE, FINAL_TEXT_HEIGHT * row + SQUARE_SIZE, 220);
-		addDrawableChild(selectAllCheckbox);
-		row++;
-		IDrawing.setPositionAndWidth(filterButton, columnX(0), FINAL_TEXT_HEIGHT * row + SQUARE_SIZE, WIDE_FIELD_WIDTH);
-		addDrawableChild(filterButton);
-
-		row++;
-		IDrawing.setPositionAndWidth(hidePlatformCheckbox, SQUARE_SIZE,
-				FINAL_TEXT_HEIGHT * row + SQUARE_SIZE, WIDE_FIELD_WIDTH);
-		addDrawableChild(hidePlatformCheckbox);
-		row++;
-
-		messageLabelRow = row;
-		final int checkboxWidth = font.width(rowHiddenText) + SQUARE_SIZE + TEXT_PADDING;
-		for (int i = 0; i < maxArrivals; i++) {
-			IDrawing.setPositionAndWidth(textFieldMessages[i], SQUARE_SIZE,
-					FINAL_TEXT_HEIGHT * row + SQUARE_SIZE, width - SQUARE_SIZE * 2 - checkboxWidth);
-			textFieldMessages[i].setValue(initialMessages[i]);
-			addDrawableChild(textFieldMessages[i]);
-
-			IDrawing.setPositionAndWidth(buttonsRowHidden[i], width - SQUARE_SIZE - checkboxWidth + TEXT_PADDING,
-					FINAL_TEXT_HEIGHT * row + SQUARE_SIZE, checkboxWidth);
-			buttonsRowHidden[i].setChecked(initialRowHidden[i]);
-			addDrawableChild(buttonsRowHidden[i]);
-			row++;
-		}
-	}
-
-	@Override
-	public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float delta) {
-		try {
-			renderBackground(guiGraphics);
-			guiGraphics.drawCenteredString(font, Text.translatable("gui.jsblock.pids_projector"), width / 2, TEXT_PADDING, ARGB_WHITE);
-
-			int row = 1;
-			drawRowLabel(guiGraphics, "preset", row++);
-			drawRowLabel(guiGraphics, "offset", row++);
-			drawRowLabel(guiGraphics, "rotate", row++);
-			drawRowLabel(guiGraphics, "scale", row);
-
-			if (messageLabelRow > 0) {
-				guiGraphics.drawString(font, messageText, SQUARE_SIZE,
-						FINAL_TEXT_HEIGHT * messageLabelRow + SQUARE_SIZE, ARGB_WHITE);
-			}
-
-			final int filteredCount = selectAllCheckbox.selected() ? 0 : filterPlatformIds.size();
-			if (filteredCount != lastFilteredCount) {
-				lastFilteredCount = filteredCount;
-				filterButton.setMessage(Text.translatable("gui.mtr.filtered_platforms", filteredCount));
-			}
-
-			super.render(guiGraphics, mouseX, mouseY, delta);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-	private void drawRowLabel(GuiGraphics guiGraphics, String key, int row) {
-		/* The same offset init() gives the fields, so a label sits on its own field's line. */
-		guiGraphics.drawString(font, Text.translatable("gui.jsblock.pids_projector." + key),
-				SQUARE_SIZE, FINAL_TEXT_HEIGHT * row + SQUARE_SIZE, ARGB_WHITE);
-	}
-
-	@Override
-	public void onClose() {
-		final double[] values = new double[fields.length];
-		for (int i = 0; i < fields.length; i++) {
-			values[i] = parse(fields[i], DEFAULTS[i]);
-		}
-		if (values[6] <= 0) {
-			values[6] = DEFAULTS[6];
-		}
-		if (selectAllCheckbox.selected()) {
-			filterPlatformIds.clear();
-		}
-		final String[] messages = new String[maxArrivals];
-		final boolean[] rowHidden = new boolean[maxArrivals];
-		for (int i = 0; i < maxArrivals; i++) {
-			messages[i] = textFieldMessages[i].getValue();
-			rowHidden[i] = buttonsRowHidden[i].selected();
-		}
-		PacketClient.sendPIDSProjectorC2S(pos, textBoxPreset.getValue(), messages, rowHidden,
-				hidePlatformCheckbox.selected(), filterPlatformIds,
-				values[0], values[1], values[2], values[3], values[4], values[5], values[6]);
-		super.onClose();
-	}
-
-	@Override
-	public boolean isPauseScreen() {
-		return false;
 	}
 }

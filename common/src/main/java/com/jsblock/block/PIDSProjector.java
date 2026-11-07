@@ -96,11 +96,12 @@ public class PIDSProjector extends JobanPIDSBase {
     }
 
     /**
-     * Opens the projector's own screen: its preset and its placement.
+     * Opens the projector's own screen: its placement on top of everything an ordinary PIDS offers.
      *
      * <p>Not the ordinary PIDS screen, which is built around a two-block panel and has no room for
-     * an offset and a rotation. Everything the ordinary screen offers that a projector can use is
-     * the preset, and the screen carries that.</p>
+     * an offset and a rotation. The projector screen shares that screen's entries -- the preset, the
+     * platform filter, one custom message and one hidden row per arrival, the hide-platform-number
+     * option -- and adds its own placement entries above them.</p>
      */
     @Override
     public InteractionResult use(BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {

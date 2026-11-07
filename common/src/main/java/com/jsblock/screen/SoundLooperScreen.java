@@ -68,7 +68,7 @@ public class SoundLooperScreen extends ScreenMapper implements IGui {
             button.setMessage(Text.literal(SOURCE_LIST[selectedCategory].getName()));
         });
 
-        textBoxSoundId = new WidgetBetterTextField("mtr:ticket_barrier", MAX_TEXT_LENGTH);
+        textBoxSoundId = TextFields.setValue(new WidgetBetterTextField("", MAX_TEXT_LENGTH), "mtr:ticket_barrier");
         textBoxRepeatTick = new WidgetIntegerTextField(DEFAULT_REPEAT_TICK, true, MAX_TEXT_LENGTH);
         textBoxSoundVolume = new WidgetIntegerTextField(DEFAULT_VOLUME, true, MAX_TEXT_LENGTH);
         textBoxx1 = new WidgetIntegerTextField(0, false, MAX_TEXT_LENGTH);
@@ -78,7 +78,7 @@ public class SoundLooperScreen extends ScreenMapper implements IGui {
         textBoxz1 = new WidgetIntegerTextField(0, false, MAX_TEXT_LENGTH);
         textBoxz2 = new WidgetIntegerTextField(0, false, MAX_TEXT_LENGTH);
 
-        textBoxNetworkAudioUrl = new WidgetBetterTextField("https://example.com/audio.ogg", MAX_TEXT_LENGTH);
+        textBoxNetworkAudioUrl = TextFields.setValue(new WidgetBetterTextField("", MAX_TEXT_LENGTH), "https://example.com/audio.ogg");
 
         checkBoxUseNetworkAudio = new WidgetBetterCheckbox(0, 0, 0, SQUARE_SIZE,
                 Text.translatable("gui.jsblock.looper.use_network_audio"), checked -> {
